@@ -16,26 +16,28 @@ let g:loaded_vimrogue = 1
 let s:DEBUG_FLAG = 1
 lockvar s:DEBUG_FLAG
 
-let s:debug_main_cnt = 0
-
-" 起動前の状態保存用のファイル名
-let s:stored_session_filename = tempname()
+" buffer先頭に表示するステータスの行数
+let s:status_line_size = 1
+lockvar s:status_line_size
 
 " 使用するbuffer名
 let s:main_buf_name = '==ROGUE=='
 lockvar s:main_buf_name
 
+" 起動前の状態保存用のファイル名
+let s:stored_session_filename = tempname()
+
 " 使用するbuffer番号
 let s:main_buf_num = -1
 
-" buffer先頭に表示するステータスの行数
-let s:status_line_size = 1
-lockvar s:status_line_size
-
-" ゲームのマップデータ listの入れ子
-" TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
+" ゲームのマップデータ listの入れ子 TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
 let s:mapdata_lst = []
 
+" 初回起動判定用 autocmdの登録時?にCursorMovedが呼ばれるため
+let s:is_initialized = 0
+
+" 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
+let s:prev_cursor_pos = []
 
 
 "------------------------------------------------------------
@@ -130,6 +132,8 @@ function! s:initialize()
     " 空行を削除しカーソルを先頭へ
     g/^$/d
     call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
+    let s:prev_cursor_pos = [s:main_buf_num, 2, 2, 0]
+
     call s:change_buf_modifiable(s:main_buf_num, 0)
 
     augroup rogue
@@ -151,11 +155,23 @@ endfunction
 
 " rogueのメインループ - CursorMoved にて呼ばれる
 function! s:rogue_main()
-    " この関数内でのmovedはどうするか
-    let coursor_char = matchstr(getline('.'), '.', col('.') - 1)
-    echo s:debug_main_cnt . ':' . coursor_char
+    if s:is_initialized == 0
+        let s:is_initialized = 1
+        return
+    endif
 
-    let s:debug_main_cnt = s:debug_main_cnt + 1
+    " TODO:移動コマンドを制限したいから無限ループのがいいかも・・・
+
+    " [bufnum, lnum, col, off]
+    let c_pos = getpos('.')
+
+    let c_char = matchstr(getline(c_pos[1]), '.', c_pos[2] - 1)
+
+    " echo c_pos
+    echo 'Now is ' . c_char
+
+    " 今のカーソル位置情報を保存
+    let s:prev_cursor_pos = copy(c_pos)
 endfunction
 
 
