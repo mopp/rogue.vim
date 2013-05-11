@@ -28,6 +28,10 @@ lockvar s:main_buf_name
 " 使用するbuffer番号
 let s:main_buf_num = -1
 
+" buffer先頭に表示するステータスの行数
+let s:status_line_size = 1
+lockvar s:status_line_size
+
 " ゲームのマップデータ listの入れ子
 " TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
 let s:mapdata_lst = []
@@ -119,8 +123,9 @@ function! s:initialize()
     " mapping定義
     call s:define_mappings()
 
-    " 初期のマップデータを配置
-    call append(0, s:mapdata_lst[s:load_mapdata('rogue_map.txt')])
+    " ステータス行分を確保し, 初期のマップデータを配置
+    execute 'normal! ' . s:status_line_size . 'i '
+    call append(s:status_line_size + 1, s:mapdata_lst[s:load_mapdata('rogue_map.txt')])
 
     " 空行を削除しカーソルを先頭へ
     g/^$/d
