@@ -21,7 +21,11 @@ let s:debug_main_cnt = 0
 " 起動前の状態保存用のファイル名
 let s:stored_session_filename = tempname()
 
-" 使用するバッファ番号
+" 使用するbuffer名
+let s:main_buf_name = '==ROGUE=='
+lockvar s:main_buf_name
+
+" 使用するbuffer番号
 let s:main_buf_num = -1
 
 " ゲームのマップデータ listの入れ子
@@ -97,12 +101,8 @@ function! s:initialize()
     execute 'mksession!' s:stored_session_filename
     call writefile(['set bg='.&bg, 'colorscheme ' . g:colors_name], s:stored_session_filename . 'x.vim')
 
-    " 1番のwindowsに移動
-    1 wincmd w
-
     " windowを作成
-    silent! new
-    silent! file VIM-ROGUE
+    execute 'silent! split' s:main_buf_name
 
     " buffer番号を保存
     let s:main_buf_num = bufnr('%')
@@ -120,11 +120,14 @@ function! s:initialize()
 
     " 初期のマップデータを配置
     call append(0, s:mapdata_lst[s:load_mapdata('rogue_map.txt')])
-    call cursor(2, 2)
+
+    " 空行を削除しカーソルを先頭へ
+    g/^$/d
+    call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
     call s:change_buf_modifiable(s:main_buf_num, 0)
 
     augroup rogue
-        autocmd CursorMoved VIM-ROGUE call s:rogue_main()
+        execute 'autocmd CursorMoved ' . s:main_buf_name . ' call s:rogue_main()'
     augroup END
 
     call s:print_debug_msg('initialized !')
