@@ -111,6 +111,7 @@ function! s:initialize()
     only
 
     " 設定変更
+    setlocal noswapfile lazyredraw
     setlocal bufhidden=delete buftype=nofile modifiable
     setlocal nolist noreadonly noswapfile textwidth=0 nowrap
     setlocal fileencodings=utf-8 fileencoding=utf-8
