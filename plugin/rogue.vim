@@ -33,11 +33,12 @@ let s:main_buf_num = -1
 " ゲームのマップデータ listの入れ子 TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
 let s:mapdata_lst = []
 
-" 初回起動判定用 autocmdの登録時?にCursorMovedが呼ばれるため
-let s:is_initialized = 0
-
 " 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
 let s:prev_cursor_pos = []
+
+" 画面の更新程度
+let s:buffer_redraw_fps = 1000 / 60
+
 
 
 "------------------------------------------------------------
@@ -104,8 +105,15 @@ endfunction
 " 初期化
 function! s:initialize()
     " 現在のセッションを保存
+    let backup_sessionoptions = &sessionoptions
+    " optionsを含めないこと
+    set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize
+
     execute 'mksession!' s:stored_session_filename
     call writefile(['set bg='.&bg, 'colorscheme ' . g:colors_name], s:stored_session_filename . 'x.vim')
+
+    let &sessionoptions = backup_sessionoptions
+    unlet backup_sessionoptions
 
     " windowを作成
     execute 'silent! split' s:main_buf_name
@@ -123,7 +131,7 @@ function! s:initialize()
     setlocal fileencodings=utf-8 fileencoding=utf-8
 
     " mapping定義
-    call s:define_mappings()
+    " call s:define_mappings()
 
     " ステータス行分を確保し, 初期のマップデータを配置
     execute 'normal! ' . s:status_line_size . 'i '
@@ -135,10 +143,6 @@ function! s:initialize()
     let s:prev_cursor_pos = [s:main_buf_num, 2, 2, 0]
 
     call s:change_buf_modifiable(s:main_buf_num, 0)
-
-    augroup rogue
-        execute 'autocmd CursorMoved ' . s:main_buf_name . ' call s:rogue_main()'
-    augroup END
 
     call s:print_debug_msg('initialized !')
 endfunction
@@ -153,25 +157,34 @@ function! s:finalize()
 endfunction
 
 
-" rogueのメインループ - CursorMoved にて呼ばれる
+" rogue主処理
 function! s:rogue_main()
-    if s:is_initialized == 0
-        let s:is_initialized = 1
-        return
-    endif
+    redraw
 
-    " TODO:移動コマンドを制限したいから無限ループのがいいかも・・・
+    " 主処理
+    while 1
+        " 文字を取得出来るまで停止
+        let in_char_code = getchar()
 
-    " [bufnum, lnum, col, off]
-    let c_pos = getpos('.')
+        " [bufnum, lnum, col, off]
+        let c_pos = getpos('.')
 
-    let c_char = matchstr(getline(c_pos[1]), '.', c_pos[2] - 1)
+        if in_char_code != 0
+            let in_char = nr2char(in_char_code)
 
-    " echo c_pos
-    echo 'Now is ' . c_char
+            if in_char ==? 'q'
+                break
+            endif
 
-    " 今のカーソル位置情報を保存
-    let s:prev_cursor_pos = copy(c_pos)
+            echo 'Now is ' . in_char
+        endif
+
+        " 今のカーソル位置情報を保存
+        let s:prev_cursor_pos = copy(c_pos)
+
+        redraw
+        " execute 'sleep ' . s:buffer_redraw_fps . 'm'
+    endwhile
 endfunction
 
 
@@ -184,3 +197,6 @@ endfunction
 
 
 call s:initialize()
+" TODO タイトル画面的なのを挟んで、mappingでスタートトリガーを打つ
+call s:rogue_main()
+call s:finalize()
