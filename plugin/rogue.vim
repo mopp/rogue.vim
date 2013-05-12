@@ -27,9 +27,6 @@ lockvar s:main_buf_name
 " 起動前の状態保存用のファイル名
 let s:stored_session_filename = tempname()
 
-" 使用するbuffer番号
-let s:main_buf_num = -1
-
 " ゲームのマップデータ listの入れ子 TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
 let s:mapdata_lst = []
 
@@ -47,14 +44,20 @@ let s:buffer_redraw_fps = 1000 / 10
 " now_place - 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
 let s:player_obj = {
             \ 'icon' : '@',
-            \ 'now_place' : [],
+            \ 'now_place' : {
+            \   'bufnum' : -1,
+            \   'lnum' : -1,
+            \   'col' : -1,
+            \ },
             \ 'life' : 100,
             \ }
 
 
 " 自機アイコンを描画
-function s:player_obj.draw_icon(bufnum, lnum, col)
-    execute 'buffer' a:bufnum
+function! s:player_obj.draw_icon(lnum, col)
+    call s:change_buf_modifiable(self.now_place.bufnum, 1)
+
+    execute 'buffer' self.now_place.bufnum
     execute 'normal! r '
 
     let save_cursor = getpos('.')
@@ -63,26 +66,19 @@ function s:player_obj.draw_icon(bufnum, lnum, col)
     execute 'normal! r'.self.icon
 
     call setpos('.', save_cursor)
+
+    call s:change_buf_modifiable(self.now_place.bufnum, 0)
 endfunction
 
 
-" 自機の場所を更新しアイコンを再描画
-function s:player_obj.update_place(pos)
-    if type(a:pos) != type([])
-        throw 'ROGUE-ERROR (type error)'
+" 自機を移動
+function! s:player_obj.move(cmd)
+    if a:cmd ==# 'h'
+    elseif a:cmd ==# 'j'
+    elseif a:cmd ==# 'k'
+    elseif a:cmd ==# 'l'
     endif
-
-    " buffer番号は大抵0がくるのでここで変更
-    let a:pos[0] = s:main_buf_num
-
-    let self.now_place = a:pos
-
-    " 自機を描画
-    call s:change_buf_modifiable(a:pos[0], 1)
-    call self.draw_icon(a:pos[0], a:pos[1], a:pos[3])
-    call s:change_buf_modifiable(a:pos[0], 0)
 endfunction
-
 
 lockvar 1 s:player_obj
 
@@ -155,7 +151,10 @@ function! s:initialize()
     execute 'silent! split' s:main_buf_name
 
     " buffer番号を保存
-    let s:main_buf_num = bufnr('%')
+    let s:player_obj.now_place.bufnum = bufnr('%')
+
+    lockvar 1 s:player_obj.now_place
+    lockvar 1 s:player_obj.now_place.bufnum
 
     " 現在windowのみに
     only
@@ -173,8 +172,8 @@ function! s:initialize()
     " 空行を削除しカーソルを先頭へ
     g/^$/d
     call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
-    let s:player_obj.update_place([s:main_buf_num, 2, 2, 0])
-    call s:change_buf_modifiable(s:main_buf_num, 0)
+
+    call s:change_buf_modifiable(s:player_obj.now_place.bufnum, 0)
 
     redraw!
 
@@ -200,19 +199,16 @@ function! s:rogue_main()
         " 文字を取得出来るまで停止
         let in_char_code = getchar()
 
-        " [bufnum, lnum, col, off]
-        let c_pos = getpos('.')
-
         if in_char_code != 0
             let in_char = nr2char(in_char_code)
 
             if in_char ==? 'q'
                 break
+            elseif (in_char ==# 'h') || (in_char ==# 'j') || (in_char ==# 'k') || (in_char ==# 'l')
+                " 移動
+                call s:player_obj.move(in_char)
             endif
         endif
-
-        " 今のカーソル位置情報を保存し再描画
-        call s:player_obj.update_place(copy(c_pos))
 
         redraw
         execute 'sleep ' . s:buffer_redraw_fps . 'm'
