@@ -60,6 +60,6 @@ function! s:main()
     endwhile
 endfunction
 
-call s:initialize()
-call s:main()
-call s:finalize()
+" call s:initialize()
+" call s:main()
+" call s:finalize()

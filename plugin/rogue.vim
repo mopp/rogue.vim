@@ -33,12 +33,58 @@ let s:main_buf_num = -1
 " ゲームのマップデータ listの入れ子 TODO:ランダムで生成, mapデータ用のディレクトリを決めて一括読み込み
 let s:mapdata_lst = []
 
-" 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
-let s:prev_cursor_pos = []
-
 " 画面の更新程度
-let s:buffer_redraw_fps = 1000 / 60
+let s:buffer_redraw_fps = 1000 / 10
 
+
+
+"------------------------------------------------------------
+" Objects
+"------------------------------------------------------------
+
+" 自機オブジェクト
+" icon - ユーザを示す文字
+" now_place - 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
+let s:player_obj = {
+            \ 'icon' : '@',
+            \ 'now_place' : [],
+            \ 'life' : 100,
+            \ }
+
+
+" 自機アイコンを描画
+function s:player_obj.draw_icon(bufnum, lnum, col)
+    execute 'buffer' a:bufnum
+    execute 'normal! r '
+
+    let save_cursor = getpos('.')
+
+    call cursor(a:lnum, a:col)
+    execute 'normal! r'.self.icon
+
+    call setpos('.', save_cursor)
+endfunction
+
+
+" 自機の場所を更新しアイコンを再描画
+function s:player_obj.update_place(pos)
+    if type(a:pos) != type([])
+        throw 'ROGUE-ERROR (type error)'
+    endif
+
+    " buffer番号は大抵0がくるのでここで変更
+    let a:pos[0] = s:main_buf_num
+
+    let self.now_place = a:pos
+
+    " 自機を描画
+    call s:change_buf_modifiable(a:pos[0], 1)
+    call self.draw_icon(a:pos[0], a:pos[1], a:pos[3])
+    call s:change_buf_modifiable(a:pos[0], 0)
+endfunction
+
+
+lockvar 1 s:player_obj
 
 
 "------------------------------------------------------------
@@ -88,15 +134,6 @@ function! s:change_buf_modifiable(buf_num, is_modif)
 endfunction
 
 
-" mappingを定義 呼び出すタイミングには注意
-function! s:define_mappings()
-    nnoremap <silent> <script> <Plug>call_finalize :call <SID>finalize()<CR>
-
-    " TODO:あとでpluginへ持ってく
-    nmap <buffer> q <Plug>call_finalize
-endfunction
-
-
 
 "------------------------------------------------------------
 " Main Functions
@@ -104,11 +141,10 @@ endfunction
 
 " 初期化
 function! s:initialize()
-    " 現在のセッションを保存
     let backup_sessionoptions = &sessionoptions
-    " optionsを含めないこと
-    set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize
+    set sessionoptions=blank,buffers,curdir,resize,help,tabpages,winsize    " optionsを含めないこと
 
+    " 現在のセッションを保存
     execute 'mksession!' s:stored_session_filename
     call writefile(['set bg='.&bg, 'colorscheme ' . g:colors_name], s:stored_session_filename . 'x.vim')
 
@@ -130,9 +166,6 @@ function! s:initialize()
     setlocal nolist noreadonly noswapfile textwidth=0 nowrap
     setlocal fileencodings=utf-8 fileencoding=utf-8
 
-    " mapping定義
-    " call s:define_mappings()
-
     " ステータス行分を確保し, 初期のマップデータを配置
     execute 'normal! ' . s:status_line_size . 'i '
     call append(s:status_line_size + 1, s:mapdata_lst[s:load_mapdata('rogue_map.txt')])
@@ -140,9 +173,10 @@ function! s:initialize()
     " 空行を削除しカーソルを先頭へ
     g/^$/d
     call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
-    let s:prev_cursor_pos = [s:main_buf_num, 2, 2, 0]
-
+    let s:player_obj.update_place([s:main_buf_num, 2, 2, 0])
     call s:change_buf_modifiable(s:main_buf_num, 0)
+
+    redraw!
 
     call s:print_debug_msg('initialized !')
 endfunction
@@ -175,15 +209,13 @@ function! s:rogue_main()
             if in_char ==? 'q'
                 break
             endif
-
-            echo 'Now is ' . in_char
         endif
 
-        " 今のカーソル位置情報を保存
-        let s:prev_cursor_pos = copy(c_pos)
+        " 今のカーソル位置情報を保存し再描画
+        call s:player_obj.update_place(copy(c_pos))
 
         redraw
-        " execute 'sleep ' . s:buffer_redraw_fps . 'm'
+        execute 'sleep ' . s:buffer_redraw_fps . 'm'
     endwhile
 endfunction
 
