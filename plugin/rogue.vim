@@ -73,6 +73,8 @@ endfunction
 
 " 自機を移動
 function! s:player_obj.move(cmd)
+    call s:print_debug_msg('called player move '.a:cmd)
+
     if a:cmd ==# 'h'
     elseif a:cmd ==# 'j'
     elseif a:cmd ==# 'k'
@@ -80,7 +82,6 @@ function! s:player_obj.move(cmd)
     endif
 endfunction
 
-lockvar 1 s:player_obj
 
 
 "------------------------------------------------------------
@@ -110,11 +111,11 @@ endfunction
 
 
 " 指定bufferのmodifiableを切り替える
-function! s:change_buf_modifiable(buf_num, is_modif)
+function! s:change_buf_modifiable(bufnum, is_modif)
     " bufferが異なっていれば切り替え対象のバッファに移動
-    if a:buf_num != bufnr('%')
-        let saved_buf_num = bufnr('%')
-        silent! 'buffer' a:buf_num
+    if a:bufnum != bufnr('%')
+        let saved_bufnum = bufnr('%')
+        silent! 'buffer' a:bufnum
     endif
 
     " modifiable変更
@@ -124,8 +125,8 @@ function! s:change_buf_modifiable(buf_num, is_modif)
         setlocal modifiable
     endif
 
-    if exists('saved_buf_num')
-        silent! 'buffer' saved_buf_num
+    if exists('saved_bufnum')
+        silent! 'buffer' saved_bufnum
     endif
 endfunction
 
@@ -153,9 +154,6 @@ function! s:initialize()
     " buffer番号を保存
     let s:player_obj.now_place.bufnum = bufnr('%')
 
-    lockvar 1 s:player_obj.now_place
-    lockvar 1 s:player_obj.now_place.bufnum
-
     " 現在windowのみに
     only
 
@@ -172,6 +170,8 @@ function! s:initialize()
     " 空行を削除しカーソルを先頭へ
     g/^$/d
     call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
+    let s:player_obj.now_place.lnum = 2
+    let s:player_obj.now_place.col = 2
 
     call s:change_buf_modifiable(s:player_obj.now_place.bufnum, 0)
 
@@ -203,6 +203,7 @@ function! s:rogue_main()
             let in_char = nr2char(in_char_code)
 
             if in_char ==? 'q'
+                " 終了
                 break
             elseif (in_char ==# 'h') || (in_char ==# 'j') || (in_char ==# 'k') || (in_char ==# 'l')
                 " 移動
