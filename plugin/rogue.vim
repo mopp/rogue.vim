@@ -34,7 +34,14 @@ let s:mapdata_lst = []
 " 画面の更新程度
 let s:buffer_redraw_fps = 1000 / 10
 
-
+" オブジェクトを表す文字とコードのテーブル
+let s:obj_identifier_table = {
+            \ 'player' :{
+            \   'id' : 101,
+            \   'icon' : ['|', '-'],
+            \  },
+            \ 'wall' : 101,
+            \ }
 
 "------------------------------------------------------------
 " Objects
@@ -63,7 +70,12 @@ endfunction
 
 " 指定座標に何があるのかチェック
 function! s:player_obj.check_target(lnum, col)
-
+    let target = s:get_position_char(a:lnum, a:col)
+    if s
+        <`2:TARGET`>
+    else
+        <`3`>
+    endif
 endfunction
 
 
