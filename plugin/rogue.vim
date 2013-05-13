@@ -1,5 +1,6 @@
 scriptencoding = utf-8
 
+
 " 存在するなら読み込み済みなのでfinish
 if exists("g:loaded_vimrogue") || 1 == &compatible
     finish
@@ -41,45 +42,82 @@ let s:buffer_redraw_fps = 1000 / 10
 
 " 自機オブジェクト
 " icon - ユーザを示す文字
-" now_place - 前回のカーソル位置情報を保存 [bufnum, lnum, col, off]
+" now_place - 前回のカーソル位置情報を保存 {lnum, col, map_obj}
 let s:player_obj = {
             \ 'icon' : '@',
+            \ 'bufnum' : -1,
             \ 'now_place' : {
-            \   'bufnum' : -1,
             \   'lnum' : -1,
             \   'col' : -1,
+            \   'map_obj' : ' ',
             \ },
             \ 'life' : 100,
             \ }
 
 
-" 自機アイコンを描画
+" 自機を初期化
+function! s:player_obj.init(lnum, col)
+    call s:player_obj.draw_icon(a:lnum, a:col)
+endfunction
+
+
+" 指定座標に何があるのかチェック
+function! s:player_obj.check_target(lnum, col)
+
+endfunction
+
+
+" 指定座標に自機アイコンを描画, 座標の更新も行う
 function! s:player_obj.draw_icon(lnum, col)
-    call s:change_buf_modifiable(self.now_place.bufnum, 1)
+    " 別バッファの場合
+    if self.bufnum != bufnr('%')
+        execute 'buffer' self.bufnum
+    endif
 
-    execute 'buffer' self.now_place.bufnum
-    execute 'normal! r '
+    call s:change_buf_modifiable(self.bufnum, 1)
 
-    let save_cursor = getpos('.')
+    let place = self.now_place
 
+    " 移動するので現在座標にあったマップ上のオブジェクトを復元
+    call cursor(place.lnum, place.col)
+    execute 'normal! r'.place.map_obj
+
+    " 通過後に復元するため, 移動先のオブジェクトを保存
+    let place.map_obj = s:get_position_char(a:lnum, a:col)
+
+    " 自機描画
     call cursor(a:lnum, a:col)
     execute 'normal! r'.self.icon
 
-    call setpos('.', save_cursor)
+    " 自機座標更新
+    let place.lnum = a:lnum
+    let place.col = a:col
 
-    call s:change_buf_modifiable(self.now_place.bufnum, 0)
+    call s:change_buf_modifiable(self.bufnum, 0)
 endfunction
 
 
 " 自機を移動
 function! s:player_obj.move(cmd)
-    call s:print_debug_msg('called player move '.a:cmd)
+    " call s:print_debug_msg('called player move '.a:cmd)
+
+    let n_lnum = self.now_place.lnum
+    let n_col = self.now_place.col
+
+    " TODO : 移動可能か判定
 
     if a:cmd ==# 'h'
+        let n_col = n_col - 1
     elseif a:cmd ==# 'j'
+        let n_lnum = n_lnum + 1
     elseif a:cmd ==# 'k'
+        let n_lnum = n_lnum - 1
     elseif a:cmd ==# 'l'
+        let n_col = n_col + 1
     endif
+
+    " 自機を描画
+    call s:player_obj.draw_icon(n_lnum, n_col)
 endfunction
 
 
@@ -131,6 +169,11 @@ function! s:change_buf_modifiable(bufnum, is_modif)
 endfunction
 
 
+" 指定座標から一文字取得
+function! s:get_position_char(lnum, col)
+    return matchstr(getline(a:lnum), '.', a:col - 1)
+endfunction
+
 
 "------------------------------------------------------------
 " Main Functions
@@ -148,32 +191,33 @@ function! s:initialize()
     let &sessionoptions = backup_sessionoptions
     unlet backup_sessionoptions
 
-    " windowを作成
+    " 新規に全画面windowを作成
     execute 'silent! split' s:main_buf_name
+    only
 
     " buffer番号を保存
-    let s:player_obj.now_place.bufnum = bufnr('%')
+    let s:player_obj.bufnum = bufnr('%')
 
     " 現在windowのみに
-    only
 
     " 設定変更
     setlocal noswapfile lazyredraw
     setlocal bufhidden=delete buftype=nofile modifiable
     setlocal nolist noreadonly noswapfile textwidth=0 nowrap
     setlocal fileencodings=utf-8 fileencoding=utf-8
+    setlocal nocursorline nofoldenable
 
     " ステータス行分を確保し, 初期のマップデータを配置
     execute 'normal! ' . s:status_line_size . 'i '
     call append(s:status_line_size + 1, s:mapdata_lst[s:load_mapdata('rogue_map.txt')])
 
-    " 空行を削除しカーソルを先頭へ
+    " 空行を削除
     g/^$/d
-    call cursor(2, 2)   " マップもランダムに生成するなら開始位置も計算必要ありか
-    let s:player_obj.now_place.lnum = 2
-    let s:player_obj.now_place.col = 2
 
-    call s:change_buf_modifiable(s:player_obj.now_place.bufnum, 0)
+    " 自機オブジェクト初期化
+    call s:player_obj.init(3, 3)   " マップもランダムに生成するなら開始位置も計算必要ありか
+
+    call s:change_buf_modifiable(s:player_obj.bufnum, 0)
 
     redraw!
 
@@ -211,8 +255,8 @@ function! s:rogue_main()
             endif
         endif
 
+        " 再描画
         redraw
-        execute 'sleep ' . s:buffer_redraw_fps . 'm'
     endwhile
 endfunction
 
@@ -222,10 +266,9 @@ endfunction
 " Commands
 "------------------------------------------------------------
 
-" TODO: ユーティリティ系でもいれよう
-
+" TODO タイトル画面的なのを挟んで、mappingでスタートトリガーを打つ
+" command! -nargs=0 RogueStart call s:initialize() | call s:rogue_main() | call s:finalize()
 
 call s:initialize()
-" TODO タイトル画面的なのを挟んで、mappingでスタートトリガーを打つ
 call s:rogue_main()
 call s:finalize()
