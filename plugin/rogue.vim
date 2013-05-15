@@ -34,14 +34,60 @@ let s:mapdata_lst = []
 " 画面の更新程度
 let s:buffer_redraw_fps = 1000 / 10
 
-" オブジェクトを表す文字とコードのテーブル
-let s:obj_identifier_table = {
-            \ 'player' :{
-            \   'id' : 101,
-            \   'icon' : ['|', '-'],
-            \  },
-            \ 'wall' : 101,
+" オブジェクトの性質を表す属性コード
+let s:OBJ_ATTR_CODE = {
+            \ 'PLAYER'      : 0x001,
+            \ 'ENEMY'       : 0x002,
+            \ 'OBSTACLE'    : 0x004,
+            \ 'THROUGH'     : 0x008,
+            \ 'ITEM_WEAPON' : 0x010,
+            \ 'ITEM_FOOD'   : 0x020,
+            \ 'UNKOWN'      : 0xfff,
             \ }
+lockvar 3 s:OBJ_ATTR_CODE
+
+" オブジェクトの情報を持つ辞書のリスト
+let s:OBJ_IDENTIFIER_LIST = [
+            \ {
+            \   'NAME'  : 'player',
+            \   'ID'    : 101,
+            \   'ICON'  : ['@'],
+            \   'ATTR'  : s:OBJ_ATTR_CODE.PLAYER,
+            \ },
+            \ {
+            \   'NAME'  : 'road',
+            \   'ID'    : 102,
+            \   'ICON'  : [' '],
+            \   'ATTR'  : s:OBJ_ATTR_CODE.THROUGH,
+            \ },
+            \ {
+            \   'NAME'  : 'wall',
+            \   'ID'    : 103,
+            \   'ICON'  : ['|', '-'],
+            \   'ATTR'  : s:OBJ_ATTR_CODE.OBSTACLE,
+            \ },
+            \ {
+            \   'NAME'  : 'Aa',
+            \   'ID'    : 104,
+            \   'ICON'  : ['A'],
+            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
+            \ },
+            \ {
+            \   'NAME'  : 'Bat',
+            \   'ID'    : 105,
+            \   'ICON'  : ['B'],
+            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
+            \ },
+            \ {
+            \   'NAME'  : 'Cat',
+            \   'ID'    : 106,
+            \   'ICON'  : ['C'],
+            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
+            \ },
+            \ ]
+lockvar 3 s:OBJ_IDENTIFIER_LIST
+
+
 
 "------------------------------------------------------------
 " Objects
@@ -51,7 +97,7 @@ let s:obj_identifier_table = {
 " icon - ユーザを示す文字
 " now_place - 前回のカーソル位置情報を保存 {lnum, col, map_obj}
 let s:player_obj = {
-            \ 'icon' : '@',
+            \ 'icon' : s:OBJ_IDENTIFIER_LIST[0].ICON[0],
             \ 'bufnum' : -1,
             \ 'now_place' : {
             \   'lnum' : -1,
@@ -68,18 +114,30 @@ function! s:player_obj.init(lnum, col)
 endfunction
 
 
-" 指定座標に何があるのかチェック
-function! s:player_obj.check_target(lnum, col)
+" 指定座標のオブジェクトデータを取得
+function! s:player_obj.get_obj_data(lnum, col)
     let target = s:get_position_char(a:lnum, a:col)
-    if s
-        <`2:TARGET`>
-    else
-        <`3`>
+
+    for obj in s:OBJ_IDENTIFIER_LIST
+        for icon in obj.ICON
+            " ターゲットの情報を取得
+            if target ==# icon
+                let t_data = obj
+            endif
+        endfor
+    endfor
+
+    if !exists('t_data')
+        " 不明なオブジェクトを発見
+        return s:OBJ_ATTR_CODE.UNKOWN
     endif
+
+    " オブジェクトデータを返す
+    return t_data
 endfunction
 
 
-" 指定座標に自機アイコンを描画, 座標の更新も行う
+" 指定座標に自機アイコンを描画, オブジェクトの持つ座標の更新も行う
 function! s:player_obj.draw_icon(lnum, col)
     " 別バッファの場合
     if self.bufnum != bufnr('%')
@@ -113,10 +171,10 @@ endfunction
 function! s:player_obj.move(cmd)
     " call s:print_debug_msg('called player move '.a:cmd)
 
+    " ここで直接書き換えると、オブジェクトの復元が出来ないため
+    " 現在(移動前)の座標をローカル変数へ
     let n_lnum = self.now_place.lnum
     let n_col = self.now_place.col
-
-    " TODO : 移動可能か判定
 
     if a:cmd ==# 'h'
         let n_col = n_col - 1
@@ -128,8 +186,17 @@ function! s:player_obj.move(cmd)
         let n_col = n_col + 1
     endif
 
-    " 自機を描画
-    call s:player_obj.draw_icon(n_lnum, n_col)
+    " 移動したい座標のにあるオブジェクトデータからアクションを判定
+    let obj_data = s:player_obj.get_obj_data(n_lnum, n_col)
+    let attr_bit = obj_data.ATTR
+
+    " ビットマスクで属性を判別
+    if and(attr_bit, s:OBJ_ATTR_CODE.THROUGH) != 0
+        " 通れるならば、自機を描画
+        call s:player_obj.draw_icon(n_lnum, n_col)
+    endif
+
+    echo obj_data
 endfunction
 
 
