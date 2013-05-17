@@ -276,14 +276,15 @@ endfunction
 
 " 初期化
 function! rogue#initialize()
-    let obj1 = objects#get_new_object('map_obj')
-    let obj2 = objects#get_new_object('map_obj')
+    let obj1 = objects#get_new_object('map_obj', [])
+    let obj2 = objects#get_new_object('map_obj', [])
     let dan1 = objects#get_new_object('dungeon_obj')
-    " let dan1 = objects#get_new_object('enemy_obj', 900)
-    echo objects#get_attr_bit('ENEMY')
+    let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
 
-    " call obj1.init()
-    " call obj2.init()
+    " echo objects#get_attr_bit('PLAYER')
+    " echo objects#get_obj_info_by_name('PLAYER')
+
+    echo enemy1
 
     return
 

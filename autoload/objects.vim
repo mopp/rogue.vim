@@ -58,9 +58,9 @@ endfunction
 
 
 "--------------------------------------------------------------------
-" Identifier - オブジェクトの情報を持つ辞書のリスト
+" Object Info - オブジェクトの情報を持つ辞書のリスト 名前の重複は禁止
 "--------------------------------------------------------------------
-let s:OBJ_DATA_LIST = [
+let s:OBJ_INFO_LIST = [
             \ {
             \   'NAME'    : 'player',
             \   'ID'      : 101,
@@ -84,30 +84,43 @@ let s:OBJ_DATA_LIST = [
             \   'ID'      : 104,
             \   'ICON'    : ['A'],
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
-            \   'LIFE'    : 0,
-            \   'ATTACK'  : 0,
-            \   'DEFENSE' : 0,
+            \   'LIFE'    : 10,
+            \   'ATTACK'  : 4,
+            \   'DEFENSE' : 3,
             \ },
             \ {
             \   'NAME'    : 'Bat',
             \   'ID'      : 105,
             \   'ICON'    : ['B'],
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
-            \   'LIFE'    : 0,
-            \   'ATTACK'  : 0,
-            \   'DEFENSE' : 0,
+            \   'LIFE'    : 20,
+            \   'ATTACK'  : 4,
+            \   'DEFENSE' : 2,
             \ },
             \ {
             \   'NAME'    : 'Cat',
             \   'ID'      : 106,
             \   'ICON'    : ['C'],
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
-            \   'LIFE'    : 0,
-            \   'ATTACK'  : 0,
-            \   'DEFENSE' : 0,
+            \   'LIFE'    : 15,
+            \   'ATTACK'  : 5,
+            \   'DEFENSE' : 4,
             \ },
             \ ]
-lockvar 3 s:OBJ_IDENTIFIER_LIST
+lockvar 3 s:OBJ_INFO_LIST
+
+
+function! objects#get_obj_info_by_name(obj_name)
+    " 浅い参照を使って、検索し一致した辞書を持つ、リストを取得
+    let obj_info = filter(copy(s:OBJ_INFO_LIST), 'v:val["NAME"] ==? "' . a:obj_name . '"')
+
+    if len(obj_info) == 0
+        throw 'ROGUE-ERROR (Not exists object info'
+    endif
+
+    " 重複は禁止なので0番目の要素を返す
+    return obj_info[0]
+endfunction
 
 
 
@@ -115,7 +128,7 @@ lockvar 3 s:OBJ_IDENTIFIER_LIST
 " Object - Enemy - 敵のデータを保持するオブジェクト
 "--------------------------------------------------------------------
 let s:enemy_obj = {
-            \ 'init_data' : {},
+            \ 'obj_info'  : {},
             \ 'life'      : 0,
             \ 'attack'    : 0,
             \ 'defense'   : 0,
@@ -128,12 +141,26 @@ let s:enemy_obj = {
 
 
 function! s:enemy_obj.init(name, lnum, col)
+    " 初期値設定
+    let obj_info = objects#get_obj_info_by_name(a:name)
 
+    " Enemy属性を持つかどうか判定
+    if and(objects#get_attr_bit('ENEMY'), obj_info.ATTR) == 0
+        throw 'ROGUE-ERROR (It is Not Enemy)'
+    endif
+
+    let s:enemy_obj.obj_info = obj_info
 
     " 位置設定
     let self.now_place.lnum = a:lnum
     let self.now_place.col = a:col
+
+    " そのオブジェクトの初期データを設定
+    let self.life = obj_info.LIFE
+    let self.attack = obj_info.ATTACK
+    let self.defense = obj_info.DEFENSE
 endfunction
+
 
 
 "--------------------------------------------------------------------
@@ -145,7 +172,7 @@ let s:map_obj = {
             \ }
 
 
-function! s:map_obj.add_field(field)
+function! s:map_obj.init(field)
     if type([]) != type(a:field)
         throw 'ROGUE-ERROR (This type Cannot add field)'
     endif
