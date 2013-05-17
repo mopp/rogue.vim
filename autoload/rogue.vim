@@ -279,9 +279,8 @@ function! rogue#initialize()
     let obj1 = objects#get_new_object('map_obj')
     let obj2 = objects#get_new_object('map_obj')
     let dan1 = objects#get_new_object('dungeon_obj')
-    call dan1.add_map(obj1)
-
-    echo dan1
+    " let dan1 = objects#get_new_object('enemy_obj', 900)
+    echo objects#get_attr_bit('ENEMY')
 
     " call obj1.init()
     " call obj2.init()
