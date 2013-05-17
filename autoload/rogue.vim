@@ -91,12 +91,6 @@ let s:OBJ_IDENTIFIER_LIST = [
 lockvar 3 s:OBJ_IDENTIFIER_LIST
 
 " ゲームのマップ関連のデータ
-" s:map_data_lst[]
-" 要素は以下
-" {
-"   field : []
-"   objs : []
-" }
 " TODO:fieldをランダム生成
 let s:map_data_lst = []
 
@@ -205,8 +199,7 @@ function! s:print_debug_msg(msg)
 endfunction
 
 
-" 指定したファイル名のデータをマップデータリストに追加
-" その際、マップ上の壁以外のオブジェクトを検出しオブジェクト化
+" 指定したファイル名からデータ読み込み
 " 読み込まれたリストの添字を返す
 function! s:load_mapdata(file)
     let filepath = g:rogue_map_data_directly . '/' . a:file
@@ -275,6 +268,8 @@ function! s:get_obj_data(lnum, col)
     return t_data
 endfunction
 
+
+
 "------------------------------------------------------------
 " Main Functions
 "------------------------------------------------------------
@@ -283,9 +278,13 @@ endfunction
 function! rogue#initialize()
     let obj1 = objects#get_new_object('map_obj')
     let obj2 = objects#get_new_object('map_obj')
+    let dan1 = objects#get_new_object('dungeon_obj')
+    call dan1.add_map(obj1)
 
-    call obj1.init()
-    call obj2.init()
+    echo dan1
+
+    " call obj1.init()
+    " call obj2.init()
 
     return
 
