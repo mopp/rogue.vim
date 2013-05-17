@@ -200,7 +200,6 @@ endfunction
 
 
 " 指定したファイル名からデータ読み込み
-" 読み込まれたリストの添字を返す
 function! s:load_mapdata(file)
     let filepath = g:rogue_map_data_directly . '/' . a:file
 
@@ -209,13 +208,7 @@ function! s:load_mapdata(file)
         return
     endif
 
-    " マップフィールドデータ読み込み
-    let field = readfile(filepath)
-    call add(s:map_data_lst, {'field' : field, 'objs' : []})
-
-    call s:print_debug_msg(string((field))
-
-    return len(s:map_data_lst) - 1
+    return readfile(filepath)
 endfunction
 
 
@@ -280,6 +273,8 @@ function! rogue#initialize()
     let obj2 = objects#get_new_object('map_obj', [])
     let dan1 = objects#get_new_object('dungeon_obj')
     let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
+
+    call s:load_mapdata('rogue_map.txt')
 
     " echo objects#get_attr_bit('PLAYER')
     " echo objects#get_obj_info_by_name('PLAYER')
