@@ -150,8 +150,8 @@ function! s:move_player(map, player, cmd)
         call s:update_status_line()
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
         " 攻撃
-        let t_obj.life -= a:player.attack
-        let a:player.life -= t_obj.attack
+        let t_obj.life -= float2nr(a:player.attack - t_obj.defense * 0.5)
+        let a:player.life -= float2nr(t_obj.attack - a:player.defense * 0.3)
 
         " ステータス行描画
         let info = t_obj.obj_info
@@ -163,8 +163,16 @@ function! s:move_player(map, player, cmd)
                     \ t_obj.defense,
                     \ )
 
+        " 倒された場合
+        if a:player.life <= 0
+            return -1
+        endif
+
         " 倒した場合
         if t_obj.life <= 0
+            " 敵の防御分回復
+            let a:player.life += t_obj.defense
+
             " オブジェクトを削除
             call a:map.delete_obj(t_obj)
 
@@ -188,6 +196,8 @@ function! s:move_player(map, player, cmd)
     endif
 
     call s:change_buf_modifiable(s:main_buf_num, 0)
+
+    return 0
 endfunction
 
 
@@ -330,7 +340,12 @@ function! rogue#rogue_main()
                 endif
 
                 " 移動
-                call s:move_player(s:map_obj, s:player_obj, in_char)
+                if -1 == s:move_player(s:map_obj, s:player_obj, in_char)
+                    " Game Over
+                    echo 'Game Over !'
+                    sleep 3
+                    break
+                endif
             endif
         endif
 
