@@ -324,12 +324,14 @@ function! rogue#rogue_main()
                 " 終了
                 break
             elseif (in_char ==# 'h') || (in_char ==# 'j') || (in_char ==# 'k') || (in_char ==# 'l')
+                " 体力を回復
+                if s:player_obj.life < s:player_obj.obj_info.LIFE
+                    let s:player_obj.life += 1
+                endif
+
                 " 移動
                 call s:move_player(s:map_obj, s:player_obj, in_char)
             endif
-
-            " TODO: do every turn
-
         endif
 
         " 再描画
