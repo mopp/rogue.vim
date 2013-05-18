@@ -280,7 +280,7 @@ function! s:map_obj.get_obj(lnum, col)
     let target_lst = filter(copy(self.objs), 'v:val["now_place"]["lnum"] == ' . a:lnum . ' && v:val["now_place"]["col"] == ' . a:col)
 
     if len(target_lst) == 0
-        throw 'ROGUE-ERROR (Get Unkown Position)'
+        throw 'ROGUE-ERROR (Get Strange Position)'
     endif
 
     return target_lst[0]

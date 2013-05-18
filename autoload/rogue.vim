@@ -28,7 +28,7 @@ let s:DEBUG_FLAG = 1
 lockvar s:DEBUG_FLAG
 
 " buffer先頭に表示するステータスの行数
-let s:status_line_size = 1
+let s:status_line_size = 2
 lockvar s:status_line_size
 
 " ステータス行のprintf関数用フォーマット
@@ -147,36 +147,66 @@ function! s:move_player(map, player, cmd)
         let place.col = n_col
 
         call s:change_buf_modifiable(s:main_buf_num, 0)
+        call s:update_status_line()
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
         " 攻撃
+
+        let info = t_obj.obj_info
+
+        let status_str = printf('Enemy : Name %s, Life %d/%d, Attak %d, Defense %d',
+                    \ info.NAME,
+                    \ t_obj.life,
+                    \ info.LIFE,
+                    \ t_obj.attack,
+                    \ t_obj.defense,
+                    \ )
+        call s:update_status_line(status_str)
     endif
 endfunction
 
 
 " ステータス行を更新
-function! s:update_status_line()
+" 引数があれば順に末尾に追加する
+function! s:update_status_line(...)
     let saved_cursor = getpos('.')
-    call cursor(1, 0)
 
     call s:change_buf_modifiable(s:main_buf_num, 1)
 
-    normal! D
+    " 書き換えるため削除
+    execute 'normal! gg' . s:status_line_size . 'dd'
 
     let info = s:player_obj.obj_info
-
-    let str = printf('Player : Life %d/%d, Attak %d, Defense %d,  Under Object %s',
+    let status_str_lst  = []
+    call add(status_str_lst, printf('Player : Life %d/%d, Attak %d, Defense %d, [%s]',
                 \ s:player_obj.life,
                 \ info.LIFE,
                 \ s:player_obj.attack,
                 \ s:player_obj.defense,
                 \ ((s:player_obj.now_place.map_obj == ' ')?('Nothing'):('Anythimg'))
-                \ )
+                \ ))
 
-    call append(0, str)
+    " 追加の表示を可変引数で受け取り
+    for str in a:000
+        call add(status_str_lst, str)
+    endfor
+
+    " 空行埋め
+    while len(status_str_lst) < s:status_line_size
+        call add(status_str_lst, '')
+    endwhile
+
+    if s:status_line_size != len(status_str_lst)
+        throw 'ROGUE-ERROR (Over status Line size)'
+    endif
+
+    call cursor(1, 1)
+    call append(0, status_str_lst)
+
     call s:change_buf_modifiable(s:main_buf_num, 0)
 
     call setpos('.', saved_cursor)
 endfunction
+
 
 
 "------------------------------------------------------------
@@ -210,9 +240,7 @@ function! rogue#initialize()
     setlocal nocursorline nofoldenable
 
     " 自機オブジェクト作成
-    let s:player_obj = objects#get_new_object('player_obj', 3, 3)
-    call cursor(3, 3)
-    execute 'normal! r'.s:player_obj.obj_info.ICON
+    let s:player_obj = objects#get_new_object('player_obj', s:status_line_size + 2, 3)
 
     " ステータス行描画
     execute 'normal! ' . s:status_line_size . 'i '
@@ -229,6 +257,10 @@ function! rogue#initialize()
 
     " マップデータ配置 TODO:関数化
     call append(s:status_line_size, s:map_obj.field)
+
+    " 自機描画 ステータス行とマップの関係上ここで描画
+    call cursor(s:status_line_size + 2, 3)
+    execute 'normal! r'.s:player_obj.obj_info.ICON
 
     call s:change_buf_modifiable(s:main_buf_num, 0)
 
