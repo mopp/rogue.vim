@@ -40,170 +40,28 @@ let s:main_buf_num = 0
 " 起動前の状態保存用のファイル名
 let s:stored_session_filename = tempname()
 
-" オブジェクトの性質を表す属性コード ビットマスク判定で使用する
-let s:OBJ_ATTR_CODE = {
-            \ 'PLAYER'      : 0x001,
-            \ 'ENEMY'       : 0x002,
-            \ 'OBSTACLE'    : 0x004,
-            \ 'THROUGH'     : 0x008,
-            \ 'ITEM_WEAPON' : 0x010,
-            \ 'ITEM_FOOD'   : 0x020,
-            \ 'UNKOWN'      : 0xfff,
-            \ }
-lockvar 3 s:OBJ_ATTR_CODE
-
-" オブジェクトの情報を持つ辞書のリスト
-let s:OBJ_IDENTIFIER_LIST = [
-            \ {
-            \   'NAME'  : 'player',
-            \   'ID'    : 101,
-            \   'ICON'  : ['@'],
-            \   'ATTR'  : s:OBJ_ATTR_CODE.PLAYER,
-            \ },
-            \ {
-            \   'NAME'  : 'road',
-            \   'ID'    : 102,
-            \   'ICON'  : [' '],
-            \   'ATTR'  : s:OBJ_ATTR_CODE.THROUGH,
-            \ },
-            \ {
-            \   'NAME'  : 'wall',
-            \   'ID'    : 103,
-            \   'ICON'  : ['|', '-'],
-            \   'ATTR'  : s:OBJ_ATTR_CODE.OBSTACLE,
-            \ },
-            \ {
-            \   'NAME'  : 'Aa',
-            \   'ID'    : 104,
-            \   'ICON'  : ['A'],
-            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
-            \ },
-            \ {
-            \   'NAME'  : 'Bat',
-            \   'ID'    : 105,
-            \   'ICON'  : ['B'],
-            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
-            \ },
-            \ {
-            \   'NAME'  : 'Cat',
-            \   'ID'    : 106,
-            \   'ICON'  : ['C'],
-            \   'ATTR'  : or(s:OBJ_ATTR_CODE.ENEMY, s:OBJ_ATTR_CODE.OBSTACLE),
-            \ },
-            \ ]
-lockvar 3 s:OBJ_IDENTIFIER_LIST
-
-" ゲームのマップ関連のデータ
-" TODO:fieldをランダム生成
-let s:map_data_lst = []
-
-
-
-"------------------------------------------------------------
-" Objects
-"------------------------------------------------------------
-
 " 自機オブジェクト
-" icon - ユーザを示す文字
-" now_place - 前回のカーソル位置情報を保存 {lnum, col, map_obj}
-let s:player_obj = {
-            \ 'icon' : s:OBJ_IDENTIFIER_LIST[0].ICON[0],
-            \ 'bufnum' : -1,
-            \ 'now_place' : {
-            \   'lnum' : -1,
-            \   'col' : -1,
-            \   'map_obj' : ' ',
-            \ },
-            \ 'life' : 100,
-            \ }
+let s:player_obj = {}
 
-
-" 自機を初期化
-function! s:player_obj.init(lnum, col)
-    call s:player_obj.draw_icon(a:lnum, a:col)
-endfunction
-
-
-" 指定座標に自機アイコンを描画, オブジェクトの持つ座標の更新も行う
-function! s:player_obj.draw_icon(lnum, col)
-    " 別バッファの場合
-    if self.bufnum != bufnr('%')
-        execute 'buffer' self.bufnum
-    endif
-
-    call s:change_buf_modifiable(self.bufnum, 1)
-
-    let place = self.now_place
-
-    " 移動するので現在座標にあったマップ上のオブジェクトを復元
-    call cursor(place.lnum, place.col)
-    execute 'normal! r'.place.map_obj
-
-    " 通過後に復元するため, 移動先のオブジェクトを保存
-    let place.map_obj = s:get_position_char(a:lnum, a:col)
-
-    " 自機描画
-    call cursor(a:lnum, a:col)
-    execute 'normal! r'.self.icon
-
-    " 自機座標更新
-    let place.lnum = a:lnum
-    let place.col = a:col
-
-    call s:change_buf_modifiable(self.bufnum, 0)
-endfunction
-
-
-" 自機を移動
-function! s:player_obj.move(cmd)
-    " call s:print_debug_msg('called player move '.a:cmd)
-
-    " ここで直接書き換えると、オブジェクトの復元が出来ないため
-    " 現在(移動前)の座標をローカル変数へ
-    let n_lnum = self.now_place.lnum
-    let n_col = self.now_place.col
-
-    if a:cmd ==# 'h'
-        let n_col = n_col - 1
-    elseif a:cmd ==# 'j'
-        let n_lnum = n_lnum + 1
-    elseif a:cmd ==# 'k'
-        let n_lnum = n_lnum - 1
-    elseif a:cmd ==# 'l'
-        let n_col = n_col + 1
-    endif
-
-    " 移動したい座標のにあるオブジェクトデータからアクションを判定
-    let obj_data = s:get_obj_data(n_lnum, n_col)
-    let attr_bit = obj_data.ATTR
-
-    " ビットマスクで属性を判別
-    if and(attr_bit, s:OBJ_ATTR_CODE.THROUGH)
-        " 通れるならば、自機を描画
-        call s:player_obj.draw_icon(n_lnum, n_col)
-    elseif and(attr_bit, s:OBJ_ATTR_CODE.ENEMY)
-        " 敵なので攻撃
-    endif
-
-    echo obj_data
-endfunction
+" マップについてのデータを持つオブジェクト TODO:階層的にする
+let s:map_obj = {}
 
 
 
 "------------------------------------------------------------
-" Util Functions
+" Functions
 "------------------------------------------------------------
 
 " for debug.
 function! s:print_debug_msg(msg)
     if s:DEBUG_FLAG
-        echomsg a:msg
+        echomsg string(a:msg)
     endif
 endfunction
 
 
 " 指定したファイル名からデータ読み込み
-function! s:load_mapdata(file)
+function! s:load_map_data_file(file)
     let filepath = g:rogue_map_data_directly . '/' . a:file
 
     if !filereadable(filepath)
@@ -236,32 +94,65 @@ function! s:change_buf_modifiable(bufnum, is_modif)
 endfunction
 
 
-" 指定座標から一文字取得
-function! s:get_position_char(lnum, col)
-    return matchstr(getline(a:lnum), '.', a:col - 1)
-endfunction
+" 自機を移動
+function! s:move_player(map, player, cmd)
+    " ここで直接書き換えると、オブジェクトの復元が出来ないため
+    " 現在(移動前)の座標を別変数へ
+    let place = a:player.now_place
+    let n_lnum = place.lnum
+    let n_col = place.col
 
-
-" 指定座標のオブジェクトデータを取得
-function! s:get_obj_data(lnum, col)
-    let target = s:get_position_char(a:lnum, a:col)
-
-    for obj in s:OBJ_IDENTIFIER_LIST
-        for icon in obj.ICON
-            " ターゲットの情報を取得
-            if target ==# icon
-                let t_data = obj
-            endif
-        endfor
-    endfor
-
-    if !exists('t_data')
-        " 不明なオブジェクトを発見
-        throw 'ROGUE-ERROR (Detect Unkown Object on Map)'
+    if 'h' ==# a:cmd
+        let n_col -= 1
+    elseif 'j' ==# a:cmd
+        let n_lnum += 1
+    elseif 'k' ==# a:cmd
+        let n_lnum -= 1
+    elseif 'l' ==# a:cmd
+        let n_col += 1
     endif
 
-    " オブジェクトデータを返す
-    return t_data
+    " 移動したい座標のにあるオブジェクトからアクションを判定
+    let t_obj = a:map.get_obj(n_lnum, n_col)
+
+    " オブジェクトの属性ビット取得
+    if !exists('t_obj.obj_info')
+        " obj_infoがない場合は道か壁のobj_infoが直接返る
+        let attr_bit = t_obj.ATTR
+    else
+        let attr_bit = t_obj.obj_info.ATTR
+    endif
+
+    call s:print_debug_msg(t_obj)
+
+    " ビットマスクで属性を判別
+    if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
+        call s:print_debug_msg('I can move')
+
+        " 移動可能なら移動
+        call s:change_buf_modifiable(s:main_buf_num, 1)
+
+        " 移動するので現在座標にあったマップ上のオブジェクトを復元
+        call cursor(place.lnum, place.col)
+        execute 'normal! r'.place.map_obj
+
+        " 通過後に復元するため, 移動先のオブジェクトを保存
+        let place.map_obj = utils#get_position_char(n_lnum, n_col)
+
+        " 自機描画
+        call cursor(n_lnum, n_col)
+        execute 'normal! r'.a:player.obj_info.ICON
+
+        " 自機座標更新
+        let place.lnum = n_lnum
+        let place.col = n_col
+
+        call s:change_buf_modifiable(s:main_buf_num, 0)
+    elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
+        call s:print_debug_msg('It is Enemy')
+
+        " 敵なので攻撃
+    endif
 endfunction
 
 
@@ -286,11 +177,8 @@ function! rogue#initialize()
     execute 'silent! split' s:main_buf_name
     only
 
-    " 自機オブジェクト作成
-
-
     " buffer番号を保存
-    let s:player_obj.bufnum = bufnr('%')
+    let s:main_buf_num = bufnr('%')
 
     " 設定変更
     setlocal noswapfile lazyredraw
@@ -299,15 +187,26 @@ function! rogue#initialize()
     setlocal fileencodings=utf-8 fileencoding=utf-8
     setlocal nocursorline nofoldenable
 
-    " ステータス行分を確保し, 初期のマップデータを配置 TODO:関数化
+    " ステータス行を確保 TODO:ステータス行捜査関数作成
     execute 'normal! ' . s:status_line_size . 'i '
-    call append(s:status_line_size, s:map_data_lst[s:load_mapdata('rogue_map.txt')].field)
-    call s:print_debug_msg(string(s:map_data_lst[0]))
 
-    " 自機オブジェクト初期化
-    call s:player_obj.init(3, 3)   " マップもランダムに生成するなら開始位置も計算必要ありか
+    " マップオブジェクト作成
+    let s:map_obj = objects#get_new_object('map_obj', s:load_map_data_file('rogue_map.txt'))
 
-    call s:change_buf_modifiable(s:player_obj.bufnum, 0)
+    " ステータス行の高さ分を調節
+    for obj in s:map_obj.objs
+        let obj.now_place.lnum += s:status_line_size
+    endfor
+
+    " マップデータ配置 TODO:関数化
+    call append(s:status_line_size, s:map_obj.field)
+
+    " 自機オブジェクト作成
+    let s:player_obj = objects#get_new_object('player_obj', 3, 3)
+    call cursor(3, 3)
+    execute 'normal! r'.s:player_obj.obj_info.ICON
+
+    call s:change_buf_modifiable(s:main_buf_num, 0)
 
     redraw!
 
@@ -336,12 +235,14 @@ function! rogue#rogue_main()
         if in_char_code != 0
             let in_char = nr2char(in_char_code)
 
+            call s:print_debug_msg('Get char : ' . in_char)
+
             if in_char ==? 'q'
                 " 終了
                 break
             elseif (in_char ==# 'h') || (in_char ==# 'j') || (in_char ==# 'k') || (in_char ==# 'l')
                 " 移動
-                call s:player_obj.move(in_char)
+                call s:move_player(s:map_obj, s:player_obj, in_char)
             endif
         endif
 

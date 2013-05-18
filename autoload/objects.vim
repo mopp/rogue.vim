@@ -241,6 +241,29 @@ function! s:map_obj.init(field)
 endfunction
 
 
+" 指定座標のオブジェクトを返す
+function! s:map_obj.get_obj(lnum, col)
+    let target_icon = utils#get_position_char(a:lnum, a:col)
+
+    if target_icon == ' '
+        return objects#get_obj_info_by_name('road')
+    elseif target_icon == '|'
+        return objects#get_obj_info_by_name('wall1')
+    elseif target_icon == '-'
+        return objects#get_obj_info_by_name('wall2')
+    endif
+
+    let target_lst = filter(copy(self.objs), 'v:val["now_place"]["lnum"] == ' . a:lnum . ' && v:val["now_place"]["col"] == ' . a:col)
+    echo target_lst
+
+    if len(target_lst) == 0
+        throw 'ROGUE-ERROR (Get Unkown Position)'
+    endif
+
+    return target_lst[0].obj_info
+endfunction
+
+
 function! s:map_obj.add_obj(obj)
     if type({}) != type(a:obj)
         throw 'ROGUE-ERROR (This type Cannot add obj)'
