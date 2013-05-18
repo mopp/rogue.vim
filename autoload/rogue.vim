@@ -1,6 +1,7 @@
 scriptencoding = utf-8
 
 
+
 " 存在するなら読み込み済みなのでfinish
 if exists("g:loaded_vimrogue") || 1 == &compatible
     finish
@@ -30,6 +31,9 @@ lockvar s:DEBUG_FLAG
 let s:status_line_size = 1
 lockvar s:status_line_size
 
+" ステータス行のprintf関数用フォーマット
+" let s:status_line_format = 'Player[ HP]'
+
 " 使用するbuffer名
 let s:main_buf_name = '==ROGUE=='
 lockvar s:main_buf_name
@@ -39,11 +43,14 @@ let s:main_buf_num = 0
 
 " 起動前の状態保存用のファイル名
 let s:stored_session_filename = tempname()
+lockvar s:stored_session_filename
 
 " 自機オブジェクト
+" TODO: 自分いるmapへの参照を追加して
+" オブジェクト側で移動などを行う？
 let s:player_obj = {}
 
-" マップについてのデータを持つオブジェクト TODO:階層的にする
+" マップについてのデータを持つオブジェクト TODO:dungeonに変更
 let s:map_obj = {}
 
 
@@ -142,10 +149,34 @@ function! s:move_player(map, player, cmd)
         call s:change_buf_modifiable(s:main_buf_num, 0)
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
         " 攻撃
-
     endif
 endfunction
 
+
+" ステータス行を更新
+function! s:update_status_line()
+    let saved_cursor = getpos('.')
+    call cursor(1, 0)
+
+    call s:change_buf_modifiable(s:main_buf_num, 1)
+
+    normal! D
+
+    let info = s:player_obj.obj_info
+
+    let str = printf('Player : Life %d/%d, Attak %d, Defense %d,  Under Object %s',
+                \ s:player_obj.life,
+                \ info.LIFE,
+                \ s:player_obj.attack,
+                \ s:player_obj.defense,
+                \ ((s:player_obj.now_place.map_obj == ' ')?('Nothing'):('Anythimg'))
+                \ )
+
+    call append(0, str)
+    call s:change_buf_modifiable(s:main_buf_num, 0)
+
+    call setpos('.', saved_cursor)
+endfunction
 
 
 "------------------------------------------------------------
@@ -178,8 +209,15 @@ function! rogue#initialize()
     setlocal fileencodings=utf-8 fileencoding=utf-8
     setlocal nocursorline nofoldenable
 
-    " ステータス行を確保 TODO:ステータス行捜査関数作成
+    " 自機オブジェクト作成
+    let s:player_obj = objects#get_new_object('player_obj', 3, 3)
+    call cursor(3, 3)
+    execute 'normal! r'.s:player_obj.obj_info.ICON
+
+    " ステータス行描画
     execute 'normal! ' . s:status_line_size . 'i '
+    call s:update_status_line()
+    call s:change_buf_modifiable(s:main_buf_num, 1)
 
     " マップオブジェクト作成
     let s:map_obj = objects#get_new_object('map_obj', s:load_map_data_file('rogue_map.txt'))
@@ -191,11 +229,6 @@ function! rogue#initialize()
 
     " マップデータ配置 TODO:関数化
     call append(s:status_line_size, s:map_obj.field)
-
-    " 自機オブジェクト作成
-    let s:player_obj = objects#get_new_object('player_obj', 3, 3)
-    call cursor(3, 3)
-    execute 'normal! r'.s:player_obj.obj_info.ICON
 
     call s:change_buf_modifiable(s:main_buf_num, 0)
 

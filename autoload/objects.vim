@@ -205,7 +205,7 @@ endfunction
 "--------------------------------------------------------------------
 let s:dummy_temp = {
             \ 'obj_info'  : {},
-            \ 'dummy' : '**DUMMY**'
+            \ 'dummy' : '**DUMMY**',
             \ 'life'      : 0,
             \ 'attack'    : 0,
             \ 'defense'   : 0,
