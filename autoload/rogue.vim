@@ -270,13 +270,14 @@ endfunction
 " 初期化
 function! rogue#initialize()
     let map1 = objects#get_new_object('map_obj', s:load_mapdata('rogue_map.txt'))
-    " let dan1 = objects#get_new_object('dungeon_obj')
+    let player = objects#get_new_object('player_obj', 3, 4)
+    echo player
     " let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
 
-    for obj in map1.objs
-        echo obj.obj_info.ICON
-        echo '(' . obj.now_place.lnum . ',' . obj.now_place.col . ')'
-    endfor
+    " for obj in map1.objs
+        " echo obj.obj_info.ICON
+        " echo '(' . obj.now_place.lnum . ',' . obj.now_place.col . ')'
+    " endfor
 
     return
 

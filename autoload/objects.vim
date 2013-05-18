@@ -1,8 +1,3 @@
-" 存在しない場合終了
-if !exists("g:loaded_vimrogue")
-    finish
-endif
-
 "--------------------------------------------------------------------
 " Global Functions
 "--------------------------------------------------------------------
@@ -59,7 +54,7 @@ endfunction
 
 
 "--------------------------------------------------------------------
-" Obj_Info - オブジェクトの情報を持つ辞書のリスト 名前の重複は禁止
+" Obj_info - オブジェクトの情報を持つ辞書のリスト 名前の重複は禁止
 "--------------------------------------------------------------------
 let s:OBJ_INFO_LIST = [
             \ {
@@ -67,6 +62,9 @@ let s:OBJ_INFO_LIST = [
             \   'ID'      : 101,
             \   'ICON'    : '@',
             \   'ATTR'    : s:OBJ_ATTR_BIT.PLAYER,
+            \   'LIFE'    : 20,
+            \   'ATTACK'  : 4,
+            \   'DEFENSE' : 2,
             \ },
             \ {
             \   'NAME'    : 'road',
@@ -132,6 +130,39 @@ endfunction
 
 
 "--------------------------------------------------------------------
+" Object - Player - ユーザデータを保持するオブジェクト
+"--------------------------------------------------------------------
+let s:player_obj = {
+            \ 'obj_info'  : {},
+            \ 'life'      : 0,
+            \ 'attack'    : 0,
+            \ 'defense'   : 0,
+            \ 'now_place' : {
+            \     'lnum'    : -1,
+            \     'col'     : -1,
+            \     'map_obj' : ' ',
+            \ },
+            \ }
+
+
+function! s:player_obj.init(lnum, col)
+    " 初期値設定
+    let obj_info = objects#get_obj_info_by_name('PLAYER')
+    let self.obj_info = obj_info
+
+    " 位置設定
+    let self.now_place.lnum = a:lnum
+    let self.now_place.col = a:col
+
+    " オブジェクトの初期データを設定
+    let self.life = obj_info.LIFE
+    let self.attack = obj_info.ATTACK
+    let self.defense = obj_info.DEFENSE
+endfunction
+
+
+
+"--------------------------------------------------------------------
 " Object - Enemy - 敵のデータを保持するオブジェクト
 "--------------------------------------------------------------------
 let s:enemy_obj = {
@@ -156,13 +187,13 @@ function! s:enemy_obj.init(name, lnum, col)
         throw 'ROGUE-ERROR (It is Not Enemy)'
     endif
 
-    let s:enemy_obj.obj_info = obj_info
+    let self.obj_info = obj_info
 
     " 位置設定
     let self.now_place.lnum = a:lnum
     let self.now_place.col = a:col
 
-    " そのオブジェクトの初期データを設定
+    " オブジェクトの初期データを設定
     let self.life = obj_info.LIFE
     let self.attack = obj_info.ATTACK
     let self.defense = obj_info.DEFENSE
