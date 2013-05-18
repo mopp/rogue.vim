@@ -264,22 +264,19 @@ endfunction
 
 
 "------------------------------------------------------------
-" Main Functions
+" Global Functions
 "------------------------------------------------------------
 
 " 初期化
 function! rogue#initialize()
-    let obj1 = objects#get_new_object('map_obj', [])
-    let obj2 = objects#get_new_object('map_obj', [])
-    let dan1 = objects#get_new_object('dungeon_obj')
-    let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
+    let map1 = objects#get_new_object('map_obj', s:load_mapdata('rogue_map.txt'))
+    " let dan1 = objects#get_new_object('dungeon_obj')
+    " let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
 
-    call s:load_mapdata('rogue_map.txt')
-
-    " echo objects#get_attr_bit('PLAYER')
-    " echo objects#get_obj_info_by_name('PLAYER')
-
-    echo enemy1
+    for obj in map1.objs
+        echo obj.obj_info.ICON
+        echo '(' . obj.now_place.lnum . ',' . obj.now_place.col . ')'
+    endfor
 
     return
 

@@ -4,10 +4,11 @@ if !exists("g:loaded_vimrogue")
 endif
 
 "--------------------------------------------------------------------
+" Global Functions
+"--------------------------------------------------------------------
 " オブジェクトのテンプレートから
 " 引数として指定されたオブジェクトを生成して返す
 " オブジェクト名はスクリプローカルな変数名と同じとする
-"--------------------------------------------------------------------
 function! objects#get_new_object(obj_name, ...)
     let var_name = 's:' . a:obj_name
 
@@ -64,25 +65,31 @@ let s:OBJ_INFO_LIST = [
             \ {
             \   'NAME'    : 'player',
             \   'ID'      : 101,
-            \   'ICON'    : ['@'],
+            \   'ICON'    : '@',
             \   'ATTR'    : s:OBJ_ATTR_BIT.PLAYER,
             \ },
             \ {
             \   'NAME'    : 'road',
             \   'ID'      : 102,
-            \   'ICON'    : [' '],
+            \   'ICON'    : ' ',
             \   'ATTR'    : s:OBJ_ATTR_BIT.THROUGH,
             \ },
             \ {
-            \   'NAME'    : 'wall',
+            \   'NAME'    : 'wall1',
             \   'ID'      : 103,
-            \   'ICON'    : ['|', '-'],
+            \   'ICON'    : '|',
             \   'ATTR'    : s:OBJ_ATTR_BIT.OBSTACLE,
             \ },
             \ {
-            \   'NAME'    : 'Aa',
+            \   'NAME'    : 'wall2',
             \   'ID'      : 104,
-            \   'ICON'    : ['A'],
+            \   'ICON'    : '-',
+            \   'ATTR'    : s:OBJ_ATTR_BIT.OBSTACLE,
+            \ },
+            \ {
+            \   'NAME'    : 'Acute',
+            \   'ID'      : 105,
+            \   'ICON'    : 'A',
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
             \   'LIFE'    : 10,
             \   'ATTACK'  : 4,
@@ -90,8 +97,8 @@ let s:OBJ_INFO_LIST = [
             \ },
             \ {
             \   'NAME'    : 'Bat',
-            \   'ID'      : 105,
-            \   'ICON'    : ['B'],
+            \   'ID'      : 106,
+            \   'ICON'    : 'B',
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
             \   'LIFE'    : 20,
             \   'ATTACK'  : 4,
@@ -99,8 +106,8 @@ let s:OBJ_INFO_LIST = [
             \ },
             \ {
             \   'NAME'    : 'Cat',
-            \   'ID'      : 106,
-            \   'ICON'    : ['C'],
+            \   'ID'      : 107,
+            \   'ICON'    : 'C',
             \   'ATTR'    : or(s:OBJ_ATTR_BIT.ENEMY, s:OBJ_ATTR_BIT.OBSTACLE),
             \   'LIFE'    : 15,
             \   'ATTACK'  : 5,
@@ -177,9 +184,29 @@ function! s:map_obj.init(field)
         throw 'ROGUE-ERROR (This type Cannot add field)'
     endif
 
-    call add(self.field, a:field)
+    let self.field = deepcopy(a:field)
 
-    " TODO:マップからオブジェクトを生成
+    " 行番号は1から
+    let line_num = 1
+
+    " マップを捜査してオブジェクトを作成
+    for line in self.field
+        " 文字列をリニアサーチ
+        for i in range(strlen(line))
+            for obj in s:OBJ_INFO_LIST
+                " 発見したらオブジェクトを作成する
+                if line[i] ==# obj.ICON
+                    " ビットマスク判定
+                    if and(obj.ATTR, objects#get_attr_bit('ENEMY'))
+                        " 敵オブジェクト作成
+                        call s:map_obj.add_obj(objects#get_new_object('enemy_obj', obj.NAME, line_num, i + 1))
+                    endif
+                endif
+            endfor
+        endfor
+
+        let line_num += 1
+    endfor
 endfunction
 
 
