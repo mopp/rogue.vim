@@ -34,6 +34,9 @@ lockvar s:status_line_size
 let s:main_buf_name = '==ROGUE=='
 lockvar s:main_buf_name
 
+" 使用するbuffer番号
+let s:main_buf_num = 0
+
 " 起動前の状態保存用のファイル名
 let s:stored_session_filename = tempname()
 
@@ -269,18 +272,6 @@ endfunction
 
 " 初期化
 function! rogue#initialize()
-    let map1 = objects#get_new_object('map_obj', s:load_mapdata('rogue_map.txt'))
-    let player = objects#get_new_object('player_obj', 3, 4)
-    echo player
-    " let enemy1 = objects#get_new_object('enemy_obj','Cat', 5, 7)
-
-    " for obj in map1.objs
-        " echo obj.obj_info.ICON
-        " echo '(' . obj.now_place.lnum . ',' . obj.now_place.col . ')'
-    " endfor
-
-    return
-
     let backup_sessionoptions = &sessionoptions
     set sessionoptions=blank,buffers,curdir,resize,help,tabpages,winsize    " optionsを含めないこと
 
@@ -294,6 +285,9 @@ function! rogue#initialize()
     " 新規に全画面windowを作成
     execute 'silent! split' s:main_buf_name
     only
+
+    " 自機オブジェクト作成
+
 
     " buffer番号を保存
     let s:player_obj.bufnum = bufnr('%')
