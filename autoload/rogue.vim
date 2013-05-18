@@ -112,22 +112,16 @@ function! s:move_player(map, player, cmd)
         let n_col += 1
     endif
 
-    " 移動したい座標のにあるオブジェクトからアクションを判定
+    " 移動したい座標のオブジェクト取得
     let t_obj = a:map.get_obj(n_lnum, n_col)
+    call s:print_debug_msg(t_obj)
 
     " オブジェクトの属性ビット取得
-    if !exists('t_obj.obj_info')
-        " obj_infoがない場合は道か壁のobj_infoが直接返る
-        let attr_bit = t_obj.ATTR
-    else
-        let attr_bit = t_obj.obj_info.ATTR
-    endif
+    let attr_bit = t_obj.obj_info.ATTR
 
     " ビットマスクで属性を判別
     if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
-        call s:print_debug_msg('I can move')
-
-        " 移動可能なら移動
+        " 移動
         call s:change_buf_modifiable(s:main_buf_num, 1)
 
         " 移動するので現在座標にあったマップ上のオブジェクトを復元
@@ -147,9 +141,8 @@ function! s:move_player(map, player, cmd)
 
         call s:change_buf_modifiable(s:main_buf_num, 0)
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
-        call s:print_debug_msg('It is Enemy')
+        " 攻撃
 
-        " 敵なので攻撃
     endif
 endfunction
 

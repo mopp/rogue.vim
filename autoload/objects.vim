@@ -200,6 +200,23 @@ function! s:enemy_obj.init(name, lnum, col)
 endfunction
 
 
+"--------------------------------------------------------------------
+" Object - Dummy - ダミーオブジェクトのひな形
+"--------------------------------------------------------------------
+let s:dummy_temp = {
+            \ 'obj_info'  : {},
+            \ 'dummy' : '**DUMMY**'
+            \ 'life'      : 0,
+            \ 'attack'    : 0,
+            \ 'defense'   : 0,
+            \ 'now_place' : {
+            \     'lnum'    : -1,
+            \     'col'     : -1,
+            \     'map_obj' : ' ',
+            \ },
+            \ }
+
+
 
 "--------------------------------------------------------------------
 " Object - Map - 敵やフィールドデータを保持するオブジェクト
@@ -245,22 +262,28 @@ endfunction
 function! s:map_obj.get_obj(lnum, col)
     let target_icon = utils#get_position_char(a:lnum, a:col)
 
+    " 壁や道のオブジェクトは管理対象外なので
+    " obj_infoを設定したダミーを返す
+    let dummy = deepcopy(s:dummy_temp)
+
     if target_icon == ' '
-        return objects#get_obj_info_by_name('road')
+        let dummy.obj_info = objects#get_obj_info_by_name('road')
+        return  dummy
     elseif target_icon == '|'
-        return objects#get_obj_info_by_name('wall1')
+        let dummy.obj_info = objects#get_obj_info_by_name('wall1')
+        return  dummy
     elseif target_icon == '-'
-        return objects#get_obj_info_by_name('wall2')
+        let dummy.obj_info = objects#get_obj_info_by_name('wall2')
+        return  dummy
     endif
 
     let target_lst = filter(copy(self.objs), 'v:val["now_place"]["lnum"] == ' . a:lnum . ' && v:val["now_place"]["col"] == ' . a:col)
-    echo target_lst
 
     if len(target_lst) == 0
         throw 'ROGUE-ERROR (Get Unkown Position)'
     endif
 
-    return target_lst[0].obj_info
+    return target_lst[0]
 endfunction
 
 
