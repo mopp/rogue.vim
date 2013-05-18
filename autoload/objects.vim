@@ -287,6 +287,15 @@ function! s:map_obj.get_obj(lnum, col)
 endfunction
 
 
+function! s:map_obj.delete_obj(obj)
+    let deleted = filter(self.objs, 'v:val isnot a:obj')
+
+    if len(deleted) == 0
+        throw 'ROGUE-ERROR (Do not delete object)'
+    endif
+endfunction
+
+
 function! s:map_obj.add_obj(obj)
     if type({}) != type(a:obj)
         throw 'ROGUE-ERROR (This type Cannot add obj)'

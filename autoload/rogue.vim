@@ -121,17 +121,18 @@ function! s:move_player(map, player, cmd)
 
     " 移動したい座標のオブジェクト取得
     let t_obj = a:map.get_obj(n_lnum, n_col)
-    call s:print_debug_msg(t_obj)
+    " call s:print_debug_msg(t_obj)
 
     " オブジェクトの属性ビット取得
     let attr_bit = t_obj.obj_info.ATTR
 
+    call s:change_buf_modifiable(s:main_buf_num, 1)
+
     " ビットマスクで属性を判別
     if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
         " 移動
-        call s:change_buf_modifiable(s:main_buf_num, 1)
 
-        " 移動するので現在座標にあったマップ上のオブジェクトを復元
+        " 現在座標にあったマップ上のオブジェクトを復元
         call cursor(place.lnum, place.col)
         execute 'normal! r'.place.map_obj
 
@@ -146,22 +147,47 @@ function! s:move_player(map, player, cmd)
         let place.lnum = n_lnum
         let place.col = n_col
 
-        call s:change_buf_modifiable(s:main_buf_num, 0)
         call s:update_status_line()
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
         " 攻撃
+        let t_obj.life -= a:player.attack
+        let a:player.life -= t_obj.attack
 
+        " ステータス行描画
         let info = t_obj.obj_info
-
-        let status_str = printf('Enemy : Name %s, Life %d/%d, Attak %d, Defense %d',
+        let status_str = printf('[Enemy] - Name:%s, Life:%d/%d, Attak:%d, Defense:%d',
                     \ info.NAME,
                     \ t_obj.life,
                     \ info.LIFE,
                     \ t_obj.attack,
                     \ t_obj.defense,
                     \ )
+
+        " 倒した場合
+        if t_obj.life <= 0
+            " オブジェクトを削除
+            call a:map.delete_obj(t_obj)
+
+            " 現在座標にあったマップ上のオブジェクトを復元
+            call cursor(place.lnum, place.col)
+            execute 'normal! r'.place.map_obj
+
+            " 通過後に復元するため, 移動先のオブジェクトを保存
+            let place.map_obj = ' '
+
+            " 自機を描画
+            call cursor(n_lnum, n_col)
+            execute 'normal! r'.a:player.obj_info.ICON
+
+            " 自機座標更新
+            let place.lnum = n_lnum
+            let place.col = n_col
+        endif
+
         call s:update_status_line(status_str)
     endif
+
+    call s:change_buf_modifiable(s:main_buf_num, 0)
 endfunction
 
 
@@ -177,7 +203,7 @@ function! s:update_status_line(...)
 
     let info = s:player_obj.obj_info
     let status_str_lst  = []
-    call add(status_str_lst, printf('Player : Life %d/%d, Attak %d, Defense %d, [%s]',
+    call add(status_str_lst, printf('[Player] - Life:%d/%d, Attak:%d, Defense:%d, [%s]',
                 \ s:player_obj.life,
                 \ info.LIFE,
                 \ s:player_obj.attack,
@@ -199,6 +225,7 @@ function! s:update_status_line(...)
         throw 'ROGUE-ERROR (Over status Line size)'
     endif
 
+    " ステータス行書き込み
     call cursor(1, 1)
     call append(0, status_str_lst)
 
@@ -300,6 +327,9 @@ function! rogue#rogue_main()
                 " 移動
                 call s:move_player(s:map_obj, s:player_obj, in_char)
             endif
+
+            " TODO: do every turn
+
         endif
 
         " 再描画
