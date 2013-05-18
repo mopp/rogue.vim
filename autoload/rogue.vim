@@ -123,8 +123,6 @@ function! s:move_player(map, player, cmd)
         let attr_bit = t_obj.obj_info.ATTR
     endif
 
-    call s:print_debug_msg(t_obj)
-
     " ビットマスクで属性を判別
     if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
         call s:print_debug_msg('I can move')
