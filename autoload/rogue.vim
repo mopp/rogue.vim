@@ -67,40 +67,6 @@ function! s:print_debug_msg(msg)
 endfunction
 
 
-" 指定したファイル名からデータ読み込み
-function! s:load_map_data_file(file)
-    let filepath = g:rogue_map_data_directly . '/' . a:file
-
-    if !filereadable(filepath)
-        throw 'ROGUE-ERROR (cannot read mapdata file)'
-        return
-    endif
-
-    return readfile(filepath)
-endfunction
-
-
-" 指定bufferのmodifiableを切り替える
-function! s:change_buf_modifiable(bufnum, is_modif)
-    " bufferが異なっていれば切り替え対象のバッファに移動
-    if a:bufnum != bufnr('%')
-        let saved_bufnum = bufnr('%')
-        silent! 'buffer' a:bufnum
-    endif
-
-    " modifiable変更
-    if a:is_modif == 0
-        setlocal nomodifiable
-    else
-        setlocal modifiable
-    endif
-
-    if exists('saved_bufnum')
-        silent! 'buffer' saved_bufnum
-    endif
-endfunction
-
-
 " 自機を移動
 function! s:move_player(map, player, cmd)
     " ここで直接書き換えると、オブジェクトの復元が出来ないため
@@ -126,26 +92,12 @@ function! s:move_player(map, player, cmd)
     " オブジェクトの属性ビット取得
     let attr_bit = t_obj.obj_info.ATTR
 
-    call s:change_buf_modifiable(s:main_buf_num, 1)
+    call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " ビットマスクで属性を判別
     if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
         " 移動
-
-        " 現在座標にあったマップ上のオブジェクトを復元
-        call cursor(place.lnum, place.col)
-        execute 'normal! r'.place.map_obj
-
-        " 通過後に復元するため, 移動先のオブジェクトを保存
-        let place.map_obj = utils#get_position_char(n_lnum, n_col)
-
-        " 自機描画
-        call cursor(n_lnum, n_col)
-        execute 'normal! r'.a:player.obj_info.ICON
-
-        " 自機座標更新
-        let place.lnum = n_lnum
-        let place.col = n_col
+        call a:player.move(n_lnum, n_col)
 
         call s:update_status_line()
     elseif 0 != and(attr_bit, objects#get_attr_bit('ENEMY'))
@@ -173,29 +125,20 @@ function! s:move_player(map, player, cmd)
             " 敵の防御分回復
             let a:player.life += t_obj.defense
 
-            " オブジェクトを削除
+            " 倒したので敵オブジェクトを削除
             call a:map.delete_obj(t_obj)
-
-            " 現在座標にあったマップ上のオブジェクトを復元
-            call cursor(place.lnum, place.col)
-            execute 'normal! r'.place.map_obj
-
-            " 通過後に復元するため, 移動先のオブジェクトを保存
-            let place.map_obj = ' '
-
-            " 自機を描画
             call cursor(n_lnum, n_col)
-            execute 'normal! r'.a:player.obj_info.ICON
+            execute 'normal! r '
 
-            " 自機座標更新
-            let place.lnum = n_lnum
-            let place.col = n_col
+            let status_str = 'Enemy Down !'
+
+            call a:player.move(n_lnum, n_col)
         endif
 
         call s:update_status_line(status_str)
     endif
 
-    call s:change_buf_modifiable(s:main_buf_num, 0)
+    call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     return 0
 endfunction
@@ -206,7 +149,7 @@ endfunction
 function! s:update_status_line(...)
     let saved_cursor = getpos('.')
 
-    call s:change_buf_modifiable(s:main_buf_num, 1)
+    call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " 書き換えるため削除
     execute 'normal! gg' . s:status_line_size . 'dd'
@@ -239,7 +182,7 @@ function! s:update_status_line(...)
     call cursor(1, 1)
     call append(0, status_str_lst)
 
-    call s:change_buf_modifiable(s:main_buf_num, 0)
+    call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     call setpos('.', saved_cursor)
 endfunction
@@ -282,10 +225,10 @@ function! rogue#initialize()
     " ステータス行描画
     execute 'normal! ' . s:status_line_size . 'i '
     call s:update_status_line()
-    call s:change_buf_modifiable(s:main_buf_num, 1)
+    call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " マップオブジェクト作成
-    let s:map_obj = objects#get_new_object('map_obj', s:load_map_data_file('rogue_map.txt'))
+    let s:map_obj = objects#get_new_object('map_obj', utils#load_map_data_file('rogue_map.txt'))
 
     " ステータス行の高さ分を調節
     for obj in s:map_obj.objs
@@ -299,7 +242,7 @@ function! rogue#initialize()
     call cursor(s:status_line_size + 2, 3)
     execute 'normal! r'.s:player_obj.obj_info.ICON
 
-    call s:change_buf_modifiable(s:main_buf_num, 0)
+    call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     redraw!
 

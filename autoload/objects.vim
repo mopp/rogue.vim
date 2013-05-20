@@ -161,6 +161,27 @@ function! s:player_obj.init(lnum, col)
 endfunction
 
 
+" 移動する座標を指定する
+function! s:player_obj.move(n_lnum, n_col)
+    let place = self.now_place
+
+    " 現在座標にあったマップ上のオブジェクトを復元
+    call cursor(place.lnum, place.col)
+    execute 'normal! r'.place.map_obj
+
+    " 通過後に復元するため, 移動先のオブジェクトを保存
+    let place.map_obj = utils#get_position_char(a:n_lnum, a:n_col)
+
+    " 自機描画
+    call cursor(a:n_lnum, a:n_col)
+    execute 'normal! r'.self.obj_info.ICON
+
+    " 自機座標更新
+    let place.lnum = a:n_lnum
+    let place.col = a:n_col
+endfunction
+
+
 
 "--------------------------------------------------------------------
 " Object - Enemy - 敵のデータを保持するオブジェクト
