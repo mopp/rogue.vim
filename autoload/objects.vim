@@ -221,6 +221,12 @@ function! s:enemy_obj.init(name, lnum, col)
 endfunction
 
 
+function! s:enemy_obj.move(lnum, col)
+    " TODO:
+endfunction
+
+
+
 "--------------------------------------------------------------------
 " Object - Dummy - ダミーオブジェクトのひな形
 "--------------------------------------------------------------------

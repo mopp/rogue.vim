@@ -69,8 +69,7 @@ endfunction
 
 " 自機を移動
 function! s:move_player(map, player, cmd)
-    " ここで直接書き換えると、オブジェクトの復元が出来ないため
-    " 現在(移動前)の座標を別変数へ
+    " ここで直接書き換えると、オブジェクトの復元が出来ないため 現在(移動前)の座標を別変数へ
     let place = a:player.now_place
     let n_lnum = place.lnum
     let n_col = place.col
@@ -87,12 +86,9 @@ function! s:move_player(map, player, cmd)
 
     " 移動したい座標のオブジェクト取得
     let t_obj = a:map.get_obj(n_lnum, n_col)
-    " call s:print_debug_msg(t_obj)
 
     " オブジェクトの属性ビット取得
     let attr_bit = t_obj.obj_info.ATTR
-
-    call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " ビットマスクで属性を判別
     if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
@@ -132,13 +128,12 @@ function! s:move_player(map, player, cmd)
 
             let status_str = 'Enemy Down !'
 
+            " 移動
             call a:player.move(n_lnum, n_col)
         endif
 
         call s:update_status_line(status_str)
     endif
-
-    call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     return 0
 endfunction
@@ -149,7 +144,7 @@ endfunction
 function! s:update_status_line(...)
     let saved_cursor = getpos('.')
 
-    call utils#change_buf_modifiable(s:main_buf_num, 1)
+    " call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " 書き換えるため削除
     execute 'normal! gg' . s:status_line_size . 'dd'
@@ -182,7 +177,7 @@ function! s:update_status_line(...)
     call cursor(1, 1)
     call append(0, status_str_lst)
 
-    call utils#change_buf_modifiable(s:main_buf_num, 0)
+    " call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     call setpos('.', saved_cursor)
 endfunction
@@ -225,7 +220,7 @@ function! rogue#initialize()
     " ステータス行描画
     execute 'normal! ' . s:status_line_size . 'i '
     call s:update_status_line()
-    call utils#change_buf_modifiable(s:main_buf_num, 1)
+    " call utils#change_buf_modifiable(s:main_buf_num, 1)
 
     " マップオブジェクト作成
     let s:map_obj = objects#get_new_object('map_obj', utils#load_map_data_file('rogue_map.txt'))
@@ -242,7 +237,7 @@ function! rogue#initialize()
     call cursor(s:status_line_size + 2, 3)
     execute 'normal! r'.s:player_obj.obj_info.ICON
 
-    call utils#change_buf_modifiable(s:main_buf_num, 0)
+    " call utils#change_buf_modifiable(s:main_buf_num, 0)
 
     redraw!
 
