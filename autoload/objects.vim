@@ -230,15 +230,15 @@ function! s:enemy_obj.move(lnum, col)
     execute 'normal! r'.place.map_obj
 
     " 通過後に復元するため, 移動先のオブジェクトを保存
-    let place.map_obj = utils#get_position_char(a:n_lnum, a:n_col)
+    let place.map_obj = utils#get_position_char(a:lnum, a:col)
 
     " 自機描画
-    call cursor(a:n_lnum, a:n_col)
+    call cursor(a:lnum, a:col)
     execute 'normal! r'.self.obj_info.ICON
 
     " 自機座標更新
-    let place.lnum = a:n_lnum
-    let place.col = a:n_col
+    let place.lnum = a:lnum
+    let place.col = a:col
 endfunction
 
 
@@ -290,13 +290,12 @@ function! s:map_obj.init(field)
         " 文字列をリニアサーチ
         for i in range(strlen(line))
             for obj in s:OBJ_INFO_LIST
+                " 文字一つづつをオブジェクト一覧と比較
+                " ビットマスク判定
                 " 発見したらオブジェクトを作成する
-                if line[i] ==# obj.ICON
-                    " ビットマスク判定
-                    if and(obj.ATTR, objects#get_attr_bit('ENEMY'))
-                        " 敵オブジェクト作成
-                        call s:map_obj.add_obj(objects#get_new_object('enemy_obj', obj.NAME, line_num, i + 1))
-                    endif
+                if (line[i] ==# obj.ICON && and(obj.ATTR, objects#get_attr_bit('ENEMY')))
+                    " 敵オブジェクト作成
+                    call s:map_obj.add_obj( objects#get_new_object('enemy_obj', obj.NAME, line_num, i + 1) )
                 endif
             endfor
         endfor

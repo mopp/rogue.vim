@@ -139,6 +139,56 @@ function! s:move_player(map, player, cmd)
 endfunction
 
 
+" 敵を移動
+function! s:move_enemy(map, player_place)
+    let p_col = a:player_place.lnum
+    let p_lnum = a:player_place.col
+
+    " 各敵に対して以下を確認
+    "  - 自機に対し直線距離にて一定距離以下か
+    "  - 一定距離以下の時、移動可能か
+    " 敵のみを抜き出すためfilterを使用
+    for enemy in filter(copy(a:map.objs), 'and(v:val["obj_info"]["ATTR"], ' . objects#get_attr_bit('ENEMY') . ')')
+        let e_col = enemy.now_place.col
+        let e_lnum = enemy.now_place.lnum
+
+        let calc_col = p_col - e_col
+        let calc_lnum = p_lnum - e_lnum
+
+        " 三平方の定理より、自機との距離を計算
+        let diff_pos = float2nr(sqrt(calc_col * calc_col + calc_lnum * calc_lnum))
+
+        " 一定以上離れているので移動しない
+        if 10 < diff_pos
+            continue
+        endif
+
+        " 移動先設定
+        if abs(calc_lnum) < abs(calc_col)
+            let e_lnum += (e_lnum < p_lnum)?1:-1
+        else
+            let e_lnum += (e_col < p_col)?1:-1
+        endif
+
+        " 移動したい座標のオブジェクト取得
+        let t_obj = a:map.get_obj(e_lnum, e_col)
+
+        " オブジェクトの属性ビット取得
+        let attr_bit = t_obj.obj_info.ATTR
+
+        " ビットマスクで属性を判別
+        if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
+            " 移動
+            call enemy.move(e_lnum, e_col)
+
+            call s:update_status_line()
+        elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
+            " 攻撃
+        endif
+    endfor
+endfunction
+
+
 " ステータス行を更新
 " 引数があれば順に末尾に追加する
 function! s:update_status_line(...)
@@ -276,6 +326,9 @@ function! rogue#rogue_main()
                 if s:player_obj.life < s:player_obj.obj_info.LIFE
                     let s:player_obj.life += 1
                 endif
+
+                " 自機位置をから敵を移動
+                call s:move_enemy(s:map_obj, s:player_obj.now_place)
 
                 " 移動
                 if -1 == s:move_player(s:map_obj, s:player_obj, in_char)
