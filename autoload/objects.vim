@@ -185,6 +185,7 @@ endfunction
 
 "--------------------------------------------------------------------
 " Object - Enemy - 敵のデータを保持するオブジェクト
+" TODO:自機と敵オブジェクトで共通部分が多いので抽象化する
 "--------------------------------------------------------------------
 let s:enemy_obj = {
             \ 'obj_info'  : {},
@@ -222,7 +223,27 @@ endfunction
 
 
 function! s:enemy_obj.move(lnum, col)
-    " TODO:
+    let place = self.now_place
+
+    " 現在座標にあったマップ上のオブジェクトを復元
+    call cursor(place.lnum, place.col)
+    execute 'normal! r'.place.map_obj
+
+    " 通過後に復元するため, 移動先のオブジェクトを保存
+    let place.map_obj = utils#get_position_char(a:n_lnum, a:n_col)
+
+    " 自機描画
+    call cursor(a:n_lnum, a:n_col)
+    execute 'normal! r'.self.obj_info.ICON
+
+    " 自機座標更新
+    let place.lnum = a:n_lnum
+    let place.col = a:n_col
+endfunction
+
+
+" 指定座標に移動できるか判定
+function! s:enemy_obj.isMove(lnum, col)
 endfunction
 
 
