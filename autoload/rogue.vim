@@ -159,31 +159,33 @@ function! s:move_enemy(map, player_place)
         let diff_pos = float2nr(sqrt(calc_col * calc_col + calc_lnum * calc_lnum))
 
         " 一定以上離れているので移動しない
-        if 10 < diff_pos
-            continue
-        endif
+        if diff_pos < 10
+            " 移動先設定 FIXME
+            if e_lnum <= e_col
+                let e_lnum += (e_lnum < p_lnum)?1:-1
+            else
+                let e_col += (e_col < p_col)?1:-1
+            endif
 
-        " 移動先設定
-        if abs(calc_lnum) < abs(calc_col)
-            let e_lnum += (e_lnum < p_lnum)?1:-1
-        else
-            let e_lnum += (e_col < p_col)?1:-1
-        endif
+            call s:print_debug_msg(e_lnum . ', ' . e_col)
 
-        " 移動したい座標のオブジェクト取得
-        let t_obj = a:map.get_obj(e_lnum, e_col)
+            " 移動したい座標のオブジェクト取得
+            let t_obj = a:map.get_obj(e_lnum, e_col)
 
-        " オブジェクトの属性ビット取得
-        let attr_bit = t_obj.obj_info.ATTR
+            " オブジェクトの属性ビット取得
+            let attr_bit = t_obj.obj_info.ATTR
 
-        " ビットマスクで属性を判別
-        if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
-            " 移動
-            call enemy.move(e_lnum, e_col)
+            " call enemy.move(e_lnum + 1, e_col)
 
-            call s:update_status_line()
-        elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
-            " 攻撃
+            " ビットマスクで属性を判別
+            if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
+                " 移動
+                call enemy.move(e_lnum, e_col)
+
+                call s:update_status_line()
+            elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
+                " 攻撃
+            endif
         endif
     endfor
 endfunction
@@ -316,7 +318,7 @@ function! rogue#rogue_main()
         if in_char_code != 0
             let in_char = nr2char(in_char_code)
 
-            call s:print_debug_msg('Get char : ' . in_char)
+            " call s:print_debug_msg('Get char : ' . in_char)
 
             if in_char ==? 'q'
                 " 終了
