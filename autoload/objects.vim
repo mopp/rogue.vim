@@ -36,8 +36,7 @@ let s:OBJ_ATTR_BIT = {
             \ 'ENEMY'       : 0x002,
             \ 'OBSTACLE'    : 0x004,
             \ 'THROUGH'     : 0x008,
-            \ 'ITEM_WEAPON' : 0x010,
-            \ 'ITEM_FOOD'   : 0x020,
+            \ 'ITEM'        : 0x010,
             \ 'UNKOWN'      : 0xfff,
             \ }
 lockvar 3 s:OBJ_ATTR_CODE
@@ -293,9 +292,14 @@ function! s:map_obj.init(field)
                 " 文字一つづつをオブジェクト一覧と比較
                 " ビットマスク判定
                 " 発見したらオブジェクトを作成する
-                if (line[i] ==# obj.ICON && and(obj.ATTR, objects#get_attr_bit('ENEMY')))
-                    " 敵オブジェクト作成
-                    call s:map_obj.add_obj( objects#get_new_object('enemy_obj', obj.NAME, line_num, i + 1) )
+                if line[i] ==# obj.ICON
+                    if and(obj.ATTR, objects#get_attr_bit('ENEMY'))
+                        " 敵オブジェクト作成
+                        call s:map_obj.add_obj( objects#get_new_object('enemy_obj', obj.NAME, line_num, i + 1) )
+                    elseif and(obj.ATTR, objects#get_attr_bit('ITEM'))
+                        " アイテムオブジェクト作成
+                        call s:map_obj.add_obj( objects#get_new_object('item_obj', obj.NAME, line_num, i + 1) )
+                    endif
                 endif
             endfor
         endfor
@@ -371,4 +375,35 @@ function! s:dungeon_obj.add_map(map)
     endif
 
     call add(self.maps, a:map)
+endfunction
+
+
+
+"--------------------------------------------------------------------
+" Object - Item - マップに配置され拾えるもの
+"--------------------------------------------------------------------
+let s:item_obj = {
+            \ 'obj_info'  : {},
+            \ 'now_place' : {
+            \     'lnum'    : -1,
+            \     'col'     : -1,
+            \     'map_obj' : ' ',
+            \ },
+            \ }
+
+
+function! s:item_obj.init(name, lnum, col)
+    " 初期値設定
+    let obj_info = objects#get_obj_info_by_name(a:name)
+
+    " Item属性を持つかどうか判定
+    if and(objects#get_attr_bit('ITEM'), obj_info.ATTR) == 0
+        throw 'ROGUE-ERROR (It is Not Enemy)'
+    endif
+
+    let self.obj_info = obj_info
+
+    " 位置設定
+    let self.now_place.lnum = a:lnum
+    let self.now_place.col = a:col
 endfunction

@@ -156,7 +156,7 @@ function! s:move_enemy(map, player_place)
         let calc_lnum = abs(p_lnum - e_lnum)
 
         " 一定以上離れているので移動しない
-        if 5 < calc_col && 5 < calc_lnum
+        if 3 < calc_col && 3 < calc_lnum
             continue
         endif
 
