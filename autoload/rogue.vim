@@ -182,7 +182,6 @@ function! s:move_enemy(map, player_place)
             call s:update_status_line()
         elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
             " 攻撃
-            call s:print_debug_msg('detect player!')
         endif
     endfor
 endfunction
@@ -326,9 +325,6 @@ function! rogue#rogue_main()
                     let s:player_obj.life += 1
                 endif
 
-                " 自機位置をから敵を移動
-                call s:move_enemy(s:map_obj, s:player_obj.now_place)
-
                 " 移動
                 if -1 == s:move_player(s:map_obj, s:player_obj, in_char)
                     " Game Over
@@ -336,6 +332,9 @@ function! rogue#rogue_main()
                     sleep 3
                     break
                 endif
+
+                " 自機位置をから敵を移動
+                call s:move_enemy(s:map_obj, s:player_obj.now_place)
             endif
         endif
 

@@ -313,6 +313,7 @@ function! s:map_obj.get_obj(lnum, col)
     " obj_infoを設定したダミーを返す
     let dummy = deepcopy(s:dummy_temp)
 
+    " FIXME
     if target_icon == ' '
         let dummy.obj_info = objects#get_obj_info_by_name('road')
         return  dummy
@@ -322,12 +323,15 @@ function! s:map_obj.get_obj(lnum, col)
     elseif target_icon == '-'
         let dummy.obj_info = objects#get_obj_info_by_name('wall2')
         return  dummy
+    elseif target_icon == '@'
+        let dummy.obj_info = objects#get_obj_info_by_name('player')
+        return  dummy
     endif
 
     let target_lst = filter(copy(self.objs), 'v:val["now_place"]["lnum"] == ' . a:lnum . ' && v:val["now_place"]["col"] == ' . a:col)
 
     if len(target_lst) == 0
-        throw 'ROGUE-ERROR (Get Strange Position)'
+        throw 'ROGUE-ERROR (Get Strange Position, ICON is '. target_icon .')'
     endif
 
     return target_lst[0]
