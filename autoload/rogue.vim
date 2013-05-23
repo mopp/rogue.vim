@@ -141,8 +141,8 @@ endfunction
 
 " 敵を移動
 function! s:move_enemy(map, player_place)
-    let p_col = a:player_place.lnum
-    let p_lnum = a:player_place.col
+    let p_col = a:player_place.col
+    let p_lnum = a:player_place.lnum
 
     " 各敵に対して以下を確認
     "  - 自機に対し直線距離にて一定距離以下か
@@ -152,40 +152,37 @@ function! s:move_enemy(map, player_place)
         let e_col = enemy.now_place.col
         let e_lnum = enemy.now_place.lnum
 
-        let calc_col = p_col - e_col
-        let calc_lnum = p_lnum - e_lnum
-
-        " 三平方の定理より、自機との距離を計算
-        let diff_pos = float2nr(sqrt(calc_col * calc_col + calc_lnum * calc_lnum))
+        let calc_col = abs(p_col - e_col)
+        let calc_lnum = abs(p_lnum - e_lnum)
 
         " 一定以上離れているので移動しない
-        if diff_pos < 10
-            " 移動先設定 FIXME
-            if e_lnum <= e_col
-                let e_lnum += (e_lnum < p_lnum)?1:-1
-            else
-                let e_col += (e_col < p_col)?1:-1
-            endif
+        if 5 < calc_col && 5 < calc_lnum
+            continue
+        endif
 
-            call s:print_debug_msg(e_lnum . ', ' . e_col)
+        " 移動先設定
+        if calc_lnum <= calc_col
+            " lnumは近いのでcolを移動し、距離を詰める
+            let e_col += (e_col < p_col)?1:-1
+        else
+            let e_lnum += (e_lnum < p_lnum)?1:-1
+        endif
 
-            " 移動したい座標のオブジェクト取得
-            let t_obj = a:map.get_obj(e_lnum, e_col)
+        " 移動したい座標のオブジェクト取得
+        let t_obj = a:map.get_obj(e_lnum, e_col)
 
-            " オブジェクトの属性ビット取得
-            let attr_bit = t_obj.obj_info.ATTR
+        " オブジェクトの属性ビット取得
+        let attr_bit = t_obj.obj_info.ATTR
 
-            " call enemy.move(e_lnum + 1, e_col)
+        " ビットマスクで属性を判別
+        if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
+            " 移動
+            call enemy.move(e_lnum, e_col)
 
-            " ビットマスクで属性を判別
-            if 0 != and(attr_bit, objects#get_attr_bit('THROUGH'))
-                " 移動
-                call enemy.move(e_lnum, e_col)
-
-                call s:update_status_line()
-            elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
-                " 攻撃
-            endif
+            call s:update_status_line()
+        elseif 0 != and(attr_bit, objects#get_attr_bit('PLAYER'))
+            " 攻撃
+            call s:print_debug_msg('detect player!')
         endif
     endfor
 endfunction
