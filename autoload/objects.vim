@@ -299,6 +299,9 @@ function! s:map_obj.init(field)
                     elseif and(obj.ATTR, objects#get_attr_bit('ITEM'))
                         " アイテムオブジェクト作成
                         call s:map_obj.add_obj( objects#get_new_object('item_obj', obj.NAME, line_num, i + 1) )
+                    elseif and(obj.ATTR, objects#get_attr_bit('PLAYER'))
+                        " 自機オブジェクト作成
+                        call s:map_obj.add_obj( objects#get_new_object('player_obj', obj.NAME, line_num, i + 1) )
                     endif
                 endif
             endfor

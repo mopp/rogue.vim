@@ -172,6 +172,7 @@ function! s:move_enemy(map, player_place)
         let t_obj = a:map.get_obj(e_lnum, e_col)
 
         " オブジェクトの属性ビット取得
+        " TODO:ここで返るplayerはダミーなので実際のplayerではない
         let attr_bit = t_obj.obj_info.ATTR
 
         " ビットマスクで属性を判別
@@ -184,6 +185,8 @@ function! s:move_enemy(map, player_place)
             " 攻撃
         endif
     endfor
+
+    return 0
 endfunction
 
 
@@ -326,15 +329,12 @@ function! rogue#rogue_main()
                 endif
 
                 " 移動
-                if -1 == s:move_player(s:map_obj, s:player_obj, in_char)
+                if (-1 == s:move_player(s:map_obj, s:player_obj, in_char)) || (-1 == s:move_enemy(s:map_obj, s:player_obj.now_place))
                     " Game Over
                     echo 'Game Over !'
                     sleep 3
                     break
                 endif
-
-                " 自機位置をから敵を移動
-                call s:move_enemy(s:map_obj, s:player_obj.now_place)
             endif
         endif
 
