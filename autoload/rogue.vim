@@ -241,29 +241,28 @@ endfunction
 
 " 初期化
 function! rogue#initialize()
-    let backup_sessionoptions = &sessionoptions
-    set sessionoptions=blank,buffers,curdir,resize,help,tabpages,winsize    " optionsを含めないこと
-
-    " 現在のセッションを保存
-    execute 'mksession!' s:stored_session_filename
-    call writefile(['set bg='.&bg, 'colorscheme ' . g:colors_name], s:stored_session_filename . 'x.vim')
-
-    let &sessionoptions = backup_sessionoptions
-    unlet backup_sessionoptions
-
-    " 新規に全画面windowを作成
-    execute 'silent! split' s:main_buf_name
+    execute 'silent! edit' s:main_buf_name
     only
 
     " buffer番号を保存
     let s:main_buf_num = bufnr('%')
 
     " 設定変更
-    setlocal noswapfile lazyredraw
-    setlocal bufhidden=delete buftype=nofile modifiable
-    setlocal nolist noreadonly noswapfile textwidth=0 nowrap
+    setlocal buftype=nowrite
+    setlocal noswapfile
+    setlocal bufhidden=wipe
+    setlocal buftype=nofile
+    setlocal nonumber
+    setlocal nolist
+    setlocal nowrap
+    setlocal nocursorline
+    setlocal nocursorcolumn
+
+    setlocal lazyredraw
+    setlocal modifiable
+    setlocal nofoldenable
+    setlocal noreadonly textwidth=0
     setlocal fileencodings=utf-8 fileencoding=utf-8
-    setlocal nocursorline nofoldenable
 
     " 自機オブジェクト作成
     let s:player_obj = objects#get_new_object('player_obj', s:status_line_size + 2, 3)
@@ -298,8 +297,7 @@ endfunction
 
 " 終了処理
 function! rogue#finalize()
-    " 保存した設定を復元
-    execute 'source' s:stored_session_filename
+    bdelete
 
     call s:print_debug_msg('finalized !')
 endfunction
